@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>data_selection_dialog</class>
- <widget class="QDialog" name="data_selection_dialog">
+ <class>file_inspection_dialog</class>
+ <widget class="QDialog" name="file_inspection_dialog">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -95,7 +95,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QDialogButtonBox" name="buttonBox">
+    <widget class="QDialogButtonBox" name="button_box">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
@@ -109,9 +109,9 @@
  <resources/>
  <connections>
   <connection>
-   <sender>buttonBox</sender>
+   <sender>button_box</sender>
    <signal>accepted()</signal>
-   <receiver>data_selection_dialog</receiver>
+   <receiver>file_inspection_dialog</receiver>
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -125,9 +125,9 @@
    </hints>
   </connection>
   <connection>
-   <sender>buttonBox</sender>
+   <sender>button_box</sender>
    <signal>rejected()</signal>
-   <receiver>data_selection_dialog</receiver>
+   <receiver>file_inspection_dialog</receiver>
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
