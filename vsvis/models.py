@@ -147,6 +147,20 @@ class ListModel(DataFrameModel):
         super().__init__(dataframe, copy)
         self.enableEditing()
 
+    def clear(self):
+        """
+        Remove all data from model except for column names.
+        """
+        if not self.editable:
+            return False
+
+        cols = self._dataFrame.columns
+        nrows = self._dataFrame.shape[0]
+        self.beginRemoveRows(QtCore.QModelIndex(), 0, nrows)
+        self._dataFrame = DataFrame(columns=cols)
+        self.endRemoveRows()
+        return True
+
     def headerData(self, *args):
         return None
 

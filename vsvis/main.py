@@ -98,13 +98,15 @@ class FileInspectionDialog(QtWidgets.QDialog, Ui_file_inspection_dialog):
         # self.roi_list_view.set_drop_sources(self.file_structure_tree_view)
 
     def _drop_signals_setup(self):
-        tree_selection_model = self.file_structure_tree_view.selectionModel()
-
         image_model = self.images_list_view.model()
         image_model.item_dropped.connect(lambda: self.file_structure_tree_view.clearSelection())
+        self.images_sort_button.clicked.connect(lambda: image_model.sort(0))
+        self.images_clear_button.clicked.connect(lambda: image_model.clear())
 
         roi_model = self.roi_list_view.model()
         roi_model.item_dropped.connect(lambda: self.file_structure_tree_view.clearSelection())
+        self.roi_sort_button.clicked.connect(lambda: roi_model.sort(0))
+        self.roi_clear_button.clicked.connect(lambda: roi_model.clear())
 
     def _get_file_info(self, filename):
         root = load_node_from_hdf5(filename, 'shape', 'dtype')
