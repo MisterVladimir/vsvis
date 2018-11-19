@@ -19,13 +19,15 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import pickle
-from anytree import Node
+import numpy as np
+from anytree import Node, PreOrderIter
 from io import BytesIO
 from PyQt5 import QtCore
 from collections import namedtuple
 from itertools import count
+from collections import OrderedDict
 from pandas import DataFrame
-from qtpandas.models.DataFrameModel import DataFrameModel
+from qtpandas.models.DataFrameModel import DataFrameModel as _DataFrameModel
 from typing import Optional
 
 NodeInfo = namedtuple('NodeInfo', ['name', 'path'])
@@ -36,7 +38,7 @@ class NodeTreeModel(QtCore.QAbstractItemModel):
         super().__init__(parent)
         self.root = root
 
-    def getNode(self, index):
+    def get_node(self, index):
         if index.isValid():
             return index.internalPointer()
         else:
@@ -64,7 +66,7 @@ class NodeTreeModel(QtCore.QAbstractItemModel):
         return 1
 
     def parent(self, index):
-        node = self.getNode(index)
+        node = self.get_node(index)
         parent_node = node.parent
         if parent_node == self.root:
             return QtCore.QModelIndex()
@@ -96,7 +98,7 @@ class NodeTreeModel(QtCore.QAbstractItemModel):
         column : int
         parent : QtCore.QModelIndex
         """
-        parentNode = self.getNode(parent)
+        parentNode = self.get_node(parent)
 
         childItem = parentNode.children[row]
 
@@ -133,17 +135,12 @@ class DraggableTreeModel(NodeTreeModel):
 
     def mimeData(self, indices) -> QtCore.QMimeData:
         print('mimeData indices are {} type'.format(type(indices)))
-        nodes = [self.getNode(index) for index in indices]
+        nodes = [self.get_node(index) for index in indices]
         return self._encode_nodes(*nodes)
 
 
-class ItemInfoTableModel(QtCore.QAbstractTableModel):
-    def __init__(self):
-        super().__init__()
-
-
-class ListModel(DataFrameModel):
-    def __init__(self, dataframe=None, copy=False):
+class DataFrameModel(_DataFrameModel):
+    def __init__(self, dataframe=None, copy=True):
         super().__init__(dataframe, copy)
         self.enableEditing()
 
@@ -161,6 +158,79 @@ class ListModel(DataFrameModel):
         self.endRemoveRows()
         return True
 
+
+class ItemInfoTableModel(DataFrameModel):
+    """
+    """
+    def __init__(self, source_selection_model, source_model, columns):
+        self._column_to_attribute = \
+            OrderedDict(zip(['Path', 'Name'], ['directory', 'name']))
+        self._column_to_attribute.update(columns)
+
+        super().__init__(DataFrame(columns=self._column_to_attribute.keys()))
+        # root = source_model.root
+        # self._data = DataFrame(
+        #     columns=columns.keys(),
+        #     data=[[getattr(node, attr) for attr in columns.values()]
+        #           for node in PreOrderIter(root) if node.is_leaf])
+
+        self.source_selection_model = source_selection_model
+        self.source_model = source_model
+        self.source_selection_model.selectionChanged[
+            QtCore.QItemSelection, QtCore.QItemSelection].connect(
+                lambda i, j: self.selection_changed(i, j))
+
+    def selection_changed(self, selected, deselected):
+        def filter_indices(indices):
+            nodes = (self.source_model.get_node(index) for index in indices)
+            mask = [hasattr(n, 'directory') for n in nodes]
+            indices = list(np.array(indices)[mask])
+            return indices
+
+        def get_rows(indices):
+            nodes = (self.source_model.get_node(index) for index in indices)
+            paths = [n.directory for n in nodes]
+            mask = np.isin(self._dataFrame['Path'], paths)
+            return self._dataFrame.index[mask].values
+
+        def get_data(indices):
+            columns = self._dataFrame.columns
+            nodes = (self.source_model.get_node(index) for index in indices)
+            data = [[str(getattr(node, self._column_to_attribute[c])) for c in columns] for node in nodes]
+
+            return data
+
+        selected = filter_indices(selected.indexes())
+        deselected = filter_indices(deselected.indexes())
+
+        dif = len(selected) - len(deselected)
+        print('dif: {}'.format(dif))
+
+        if dif > 0:
+            self.addDataFrameRows(dif)
+        elif dif < 0:
+            rows = get_rows(deselected[-abs(dif):])
+            deselected = deselected[-abs(dif):]
+            self.removeDataFrameRows(rows)
+
+        # at this point all we need to do is replace
+        if len(deselected) > 0:
+            rows = get_rows(deselected)
+            data = get_data(selected[:len(deselected)])
+            self._dataFrame.iloc[rows, :] = data
+            self.layoutChanged.emit()
+            selected = selected[len(deselected):]
+        if len(selected) > 0:
+            data = get_data(selected)
+            self._dataFrame.iloc[-abs(dif):, :] = data
+            self.layoutChanged.emit()
+
+        self._dataFrame.reset_index(drop=True, inplace=True)
+        return True
+        # adding selected indices
+
+
+class ListModel(DataFrameModel):
     def headerData(self, *args):
         return None
 
@@ -208,7 +278,6 @@ class DroppableListModel(ListModel):
             return False
 
     def dropMimeData(self, data, action, *args):
-        print('model drop')
         if not self.canDropMimeData(data):
             return False
         elif action == QtCore.Qt.IgnoreAction:

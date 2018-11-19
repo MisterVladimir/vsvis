@@ -22,7 +22,7 @@ import h5py
 from anytree import Node
 
 
-def load_node_from_hdf5(filename: str, *args):
+def load_node_from_hdf5(filename: str, *args) -> Node:
     """
     Load the contents of an HDF5 file into an anytree.Node object. The result
     is a graph whose root is a Node('root') and the leaves are Datasets.
@@ -65,6 +65,7 @@ def _recursively_load_as_node(grp, path, node, *args):
         if isinstance(item, h5py.Dataset):
             kwargs = {arg: getattr(item, arg) for arg in args}
             child = Node(key, node, row=row, **kwargs)
+            child.directory = nodepath(child)
             row += 1
 
         elif isinstance(item, h5py.Group):

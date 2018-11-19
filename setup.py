@@ -34,7 +34,7 @@ if __name__ == '__main__':
     from setuptools import find_packages
     ver = '0.1'
     url = r'https://github.com/MisterVladimir/vsvis'
-    setup(name='vladutils',
+    setup(name='vsvis',
           version=ver,
           packages=find_packages(),
           ext_modules=[],
@@ -51,4 +51,4 @@ if __name__ == '__main__':
               'Intended Audience :: Science/Research',
               'Topic :: Scientific/Engineering :: Medical Science Apps.',
               'Topic :: Scientific/Engineering :: Image Recognition',
-              'Programming Language :: Python :: 3.6'])
+              'Programming Language :: Python :: 3.7'])

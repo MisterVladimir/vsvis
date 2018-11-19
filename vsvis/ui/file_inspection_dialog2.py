@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'file_inspection_dialog2.ui'
 #
-# Created by: PyQt5 UI code generator 5.6
+# Created by: PyQt5 UI code generator 5.11.3
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -17,7 +17,6 @@ class Ui_file_inspection_dialog(object):
         self.main_widget = QtWidgets.QWidget(file_inspection_dialog)
         self.main_widget.setObjectName("main_widget")
         self.horizontalLayout = QtWidgets.QHBoxLayout(self.main_widget)
-        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.file_structure_groupbox = QtWidgets.QGroupBox(self.main_widget)
         self.file_structure_groupbox.setObjectName("file_structure_groupbox")
@@ -52,13 +51,18 @@ class Ui_file_inspection_dialog(object):
         self.data_info_table_view.setMaximumSize(QtCore.QSize(16777215, 16777215))
         self.data_info_table_view.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.data_info_table_view.setTabKeyNavigation(False)
+        self.data_info_table_view.setDragDropOverwriteMode(False)
+        self.data_info_table_view.setAlternatingRowColors(True)
         self.data_info_table_view.setSelectionMode(QtWidgets.QAbstractItemView.NoSelection)
         self.data_info_table_view.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.data_info_table_view.setShowGrid(True)
         self.data_info_table_view.setGridStyle(QtCore.Qt.DotLine)
         self.data_info_table_view.setObjectName("data_info_table_view")
-        self.data_info_table_view.horizontalHeader().setDefaultSectionSize(60)
+        self.data_info_table_view.horizontalHeader().setDefaultSectionSize(100)
+        self.data_info_table_view.horizontalHeader().setHighlightSections(True)
         self.data_info_table_view.horizontalHeader().setMinimumSectionSize(25)
+        self.data_info_table_view.horizontalHeader().setStretchLastSection(True)
+        self.data_info_table_view.verticalHeader().setVisible(True)
         self.verticalLayout_2.addWidget(self.data_info_table_view)
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")

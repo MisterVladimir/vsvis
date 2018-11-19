@@ -109,11 +109,20 @@ class FileInspectionDialog(QtWidgets.QDialog, Ui_file_inspection_dialog):
         self.roi_clear_button.clicked.connect(lambda: roi_model.clear())
 
     def _get_file_info(self, filename):
-        root = load_node_from_hdf5(filename, 'shape', 'dtype')
-        # print(RenderTree(root))
+        extra_column_names = ['Shape', 'Type']
+        extra_node_attributes = ['shape', 'dtype']
+        root = load_node_from_hdf5(filename, *extra_node_attributes)
         model = models.DraggableTreeModel(root)
         self.file_structure_tree_view.setModel(model)
+
         self._drop_signals_setup()
+
+        selection_model = self.file_structure_tree_view.selectionModel()
+        columns_to_node_attributes = OrderedDict(zip(extra_column_names,
+                                                     extra_node_attributes))
+        table_model = models.ItemInfoTableModel(
+            selection_model, model, columns_to_node_attributes)
+        self.data_info_table_view.setModel(table_model)
 
 
 def run():
@@ -123,5 +132,14 @@ def run():
     sys.exit(app.exec_())
 
 
+def test_file_info_dialog():
+    filename = os.path.join('vsvis', 'test', 'data', 'test_file_info_dialog.h5')
+    filename = os.path.abspath(filename)
+    print(filename)
+    app = QtWidgets.QApplication(sys.argv)
+    dialog = FileInspectionDialog(filename)
+    dialog.show()
+    sys.exit(app.exec_())
+
 if __name__ == "__main__":
-    run()
+    test_file_info_dialog()
