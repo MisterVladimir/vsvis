@@ -18,8 +18,5 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-import os
+import pytestqt
 
-# https://stackoverflow.com/questions/25389095/python-get-path-of-root-project-structure
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-UI_DIR = os.path.join(ROOT_DIR, 'ui')

@@ -18,8 +18,16 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-import os
+from PyQt5 import QtWidgets, uic
+from os.path import join
 
-# https://stackoverflow.com/questions/25389095/python-get-path-of-root-project-structure
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-UI_DIR = os.path.join(ROOT_DIR, 'ui')
+form, base = uic.loadUiType(join('ui', 'groupbox.ui'))
+
+
+class GroupBoxWidget(form, base):
+    def __init__(self, title, parent=None):
+        super().__init__(parent)
+        self.groupbox.setTitle(title)
+
+    def setModel(self, model):
+        self.list_view.setModel(model)

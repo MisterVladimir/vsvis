@@ -134,7 +134,6 @@ class DraggableTreeModel(NodeTreeModel):
         return ['application/node']
 
     def mimeData(self, indices) -> QtCore.QMimeData:
-        print('mimeData indices are {} type'.format(type(indices)))
         nodes = [self.get_node(index) for index in indices]
         return self._encode_nodes(*nodes)
 
@@ -168,11 +167,6 @@ class ItemInfoTableModel(DataFrameModel):
         self._column_to_attribute.update(columns)
 
         super().__init__(DataFrame(columns=self._column_to_attribute.keys()))
-        # root = source_model.root
-        # self._data = DataFrame(
-        #     columns=columns.keys(),
-        #     data=[[getattr(node, attr) for attr in columns.values()]
-        #           for node in PreOrderIter(root) if node.is_leaf])
 
         self.source_selection_model = source_selection_model
         self.source_model = source_model
@@ -204,7 +198,6 @@ class ItemInfoTableModel(DataFrameModel):
         deselected = filter_indices(deselected.indexes())
 
         dif = len(selected) - len(deselected)
-        print('dif: {}'.format(dif))
 
         if dif > 0:
             self.addDataFrameRows(dif)
@@ -218,13 +211,12 @@ class ItemInfoTableModel(DataFrameModel):
             rows = get_rows(deselected)
             data = get_data(selected[:len(deselected)])
             self._dataFrame.iloc[rows, :] = data
-            self.layoutChanged.emit()
             selected = selected[len(deselected):]
         if len(selected) > 0:
             data = get_data(selected)
             self._dataFrame.iloc[-abs(dif):, :] = data
-            self.layoutChanged.emit()
 
+        self.layoutChanged.emit()
         self._dataFrame.reset_index(drop=True, inplace=True)
         return True
         # adding selected indices

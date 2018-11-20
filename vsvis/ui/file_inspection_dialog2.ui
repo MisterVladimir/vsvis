@@ -101,6 +101,9 @@
            <property name="gridStyle">
             <enum>Qt::DotLine</enum>
            </property>
+           <attribute name="horizontalHeaderCascadingSectionResizes">
+            <bool>true</bool>
+           </attribute>
            <attribute name="horizontalHeaderDefaultSectionSize">
             <number>100</number>
            </attribute>
@@ -119,7 +122,7 @@
           </widget>
          </item>
          <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <layout class="QHBoxLayout" name="list_layout">
            <item>
             <widget class="QGroupBox" name="images_groupbox">
              <property name="title">

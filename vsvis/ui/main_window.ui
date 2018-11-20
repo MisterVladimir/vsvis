@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>830</width>
-    <height>608</height>
+    <width>897</width>
+    <height>664</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,7 +19,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>830</width>
+     <width>897</width>
      <height>25</height>
     </rect>
    </property>
@@ -27,21 +27,27 @@
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="action_open"/>
+    <addaction name="action_open_data"/>
+    <addaction name="action_open_image"/>
    </widget>
    <addaction name="menu_file"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
-  <action name="action_open">
+  <action name="action_open_data">
    <property name="text">
-    <string>Open...</string>
+    <string>Open data...</string>
+   </property>
+  </action>
+  <action name="action_open_image">
+   <property name="text">
+    <string>Open image...</string>
    </property>
   </action>
  </widget>
  <resources/>
  <connections>
   <connection>
-   <sender>action_open</sender>
+   <sender>action_open_data</sender>
    <signal>triggered()</signal>
    <receiver>main_window</receiver>
    <slot>repaint()</slot>

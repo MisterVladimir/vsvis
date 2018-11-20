@@ -58,6 +58,7 @@ class Ui_file_inspection_dialog(object):
         self.data_info_table_view.setShowGrid(True)
         self.data_info_table_view.setGridStyle(QtCore.Qt.DotLine)
         self.data_info_table_view.setObjectName("data_info_table_view")
+        self.data_info_table_view.horizontalHeader().setCascadingSectionResizes(True)
         self.data_info_table_view.horizontalHeader().setDefaultSectionSize(100)
         self.data_info_table_view.horizontalHeader().setHighlightSections(True)
         self.data_info_table_view.horizontalHeader().setMinimumSectionSize(25)

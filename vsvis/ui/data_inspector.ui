@@ -294,7 +294,7 @@
   </connection>
   <connection>
    <sender>probability_slider</sender>
-   <signal>valueChanged(int)</signal>
+   <signal>sliderReleased()</signal>
    <receiver>image_graphics_view</receiver>
    <slot>deleteLater()</slot>
    <hints>

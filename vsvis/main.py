@@ -135,11 +135,12 @@ def run():
 def test_file_info_dialog():
     filename = os.path.join('vsvis', 'test', 'data', 'test_file_info_dialog.h5')
     filename = os.path.abspath(filename)
-    print(filename)
+    # print(filename)
     app = QtWidgets.QApplication(sys.argv)
     dialog = FileInspectionDialog(filename)
     dialog.show()
     sys.exit(app.exec_())
 
 if __name__ == "__main__":
+    # run()
     test_file_info_dialog()
