@@ -22,7 +22,7 @@ import h5py
 from anytree import Node
 
 
-def load_node_from_hdf5(filename: str, *args) -> Node:
+def load_node_from_hdf5(filename: str, *args, **kwargs) -> Node:
     """
     Load the contents of an HDF5 file into an anytree.Node object. The result
     is a graph whose root is a Node('root') and the leaves are Datasets.
@@ -37,14 +37,14 @@ def load_node_from_hdf5(filename: str, *args) -> Node:
         Attributes of Dataset objects to store in each leaf node.
     """
     with h5py.File(filename, 'r') as h5file:
-        root = _recursively_load_as_node(h5file, '/', Node('root'), *args)
+        root = _recursively_load_as_node(h5file, '/', Node('root'), *args, **kwargs)
 
     while root.parent is not None:
         root = root.parent
     return root
 
 
-def _recursively_load_as_node(grp, path, node, *args):
+def _recursively_load_as_node(grp, path, node, *args, **kwargs):
     """
     """
     def nodepath(node):
@@ -56,26 +56,42 @@ def _recursively_load_as_node(grp, path, node, *args):
         >>> str(dataset1)
         "Node('/root/group1/group2/dataset1')"
         >>> nodepath(dataset1)
-        '/group1/group2/dataset1'
+        '/group1/group2/dataset1/'
         """
-        return str(node).split("'")[1][5:]
+        if len(node.path) == 1:
+            print('nodepath root')
+            return ''
+        else:
+            result = str(node).split("'")[1][5:] + '/'
+            # result = '/' + '/'.join([n.name for n in node.path[1:]]) + '/'
+            # print('nodepath: {}'.format(result))
+        return result
+        # return '/' + '/'.join([n.name for n in node.path[1:]]) + '/'
+        
+        # return str(node).split("'")[1][5:] + '/'
 
     row = 0
     for key, item in grp[path].items():
         if isinstance(item, h5py.Dataset):
-            kwargs = {arg: getattr(item, arg) for arg in args}
-            child = Node(key, node, row=row, **kwargs)
-            child.directory = nodepath(child)
+            _kwargs = {'name': key, 'parent': node, 'row': row}
+            _kwargs.update({k: fn(item) for k, fn in kwargs.items()})
+            _kwargs.update({arg: getattr(item, arg) for arg in args})
+            child = Node(**_kwargs)
+            # child.directory = nodepath(child)
             row += 1
 
         elif isinstance(item, h5py.Group):
+            # backtrack to common branchpoint
             while node.parent is not None:
-                if nodepath(node) == path[:-1]:
+                # print(nodepath(node))
+                # print(path)
+                if nodepath(node) == path:
                     break
                 else:
                     node = node.parent
-            child = Node(key, node, row=row)
+
+            child = Node(name=key, parent=node, row=row)
             node = _recursively_load_as_node(
-                grp, path + key + '/', child, *args)
+                grp, path + key + '/', child, *args, **kwargs)
             row += 1
     return node

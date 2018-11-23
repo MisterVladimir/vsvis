@@ -1,1 +1,1 @@
-/vsvis/test/data/*
+include vsvis/tests/data/*

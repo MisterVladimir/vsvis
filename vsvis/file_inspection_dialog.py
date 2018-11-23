@@ -25,6 +25,7 @@ from PyQt5 import QtCore, QtWidgets, uic
 import pandas as pd
 from typing import Union, Sequence
 from anytree import Node
+from collections import OrderedDict, namedtuple
 
 from . import models
 from .utils import load_node_from_hdf5
@@ -32,29 +33,35 @@ from . import UI_DIR
 
 
 DialogClass, DialogBaseClass = uic.loadUiType(
-    os.path.join('ui', 'file_inspection_dialog.ui'))
+    os.path.join(UI_DIR, 'file_inspection_dialog.ui'))
 
-GroupBoxClass, GroupBoxBaseClass = uic.loadUiType(os.path.join('ui', 'groupbox.ui'))
+GroupBoxClass, GroupBoxBaseClass = uic.loadUiType(
+    os.path.join(UI_DIR, 'listbox.ui'))
 
 
 class LabeledListWidget(GroupBoxClass, GroupBoxBaseClass):
     def __init__(self, title: str, parent: QtWidgets.QWidget = None):
         super().__init__(parent)
+        self.setupUi(self)
         self.groupbox.setTitle(title)
 
     def setModel(self, model: models.DroppableListModel) -> None:
         self.list_view.setModel(model)
 
-    def get_data(self, column: Union(int, slice)) -> np.ndarray:
+    def get_data(self, column: Union[int, slice]) -> np.ndarray:
         model = self.list_view.model()
         df = model.dataFrame()
         data = df.iloc[:, column]
         return data.values
 
+FileLoadingParameter = namedtuple(
+    'FileLoadingParameter', ['attr', 'column', 'function'], defaults=[None])
+
 
 class FileInspectionDialog(DialogClass, DialogBaseClass):
     def __init__(self, parent: QtWidgets.QWidget = None):
         super().__init__(parent)
+        self.setupUi(self)
         self.list_widgets = {}
         self.filename = None
         self.columns = []
@@ -66,11 +73,15 @@ class FileInspectionDialog(DialogClass, DialogBaseClass):
         model = models.DraggableTreeModel(root)
         self.file_structure_tree_view.setModel(model)
 
-    def load_file(self, filename: str, **attributes):
+    def load_file(self, filename: str, *parameters):
         self.filename = filename
-        self.columns = list(attributes.keys())
-        self.attributes = list(attributes.values())
-        root = load_node_from_hdf5(filename, *self.attributes)
+        self.attributes, self.columns, functions = zip(*parameters)
+
+        args = [attr for attr, col, func in zip(self.attributes, self.columns, functions) if func is None]
+        kwargs = {attr: func for attr, col, func in zip(self.attributes, self.columns, functions)
+                  if func is not None}
+        root = load_node_from_hdf5(filename, *args, **kwargs)
+
         tree_model = self.file_structure_tree_view.model()
         tree_model.root = root
         tree_model.layoutChanged.emit()
@@ -91,19 +102,20 @@ class FileInspectionDialog(DialogClass, DialogBaseClass):
     def add_list_widget(
             self, title: str, columns: Sequence[str]) -> bool:
 
-        columns = np.array(columns)
+        # columns = np.array(columns)
         if not np.all(np.isin(columns, self.columns)):
             print('{} not a subset of {}'.format(columns, self.columns))
             return False
 
-        widget = LabeledListWidget(title)
+        widget = LabeledListWidget(title, self.data_info_groupbox)
+        self.list_layout.addWidget(widget)
         dataframe = pd.DataFrame(columns=columns)
         model = models.DroppableListModel(dataframe)
         widget.setModel(model)
 
         widget.sort_button.clicked.connect(lambda: model.sort(0))
-        widget.delete_button.clicked(
-            lambda: model.removeDataFrameRows(widget.selectedIndexes()))
+        widget.delete_button.clicked.connect(
+            lambda: model.removeDataFrameRows(widget.list_view.selectedIndexes()))
         widget.clear_button.clicked.connect(lambda: model.clear())
 
         self.list_layout.addWidget(widget)
@@ -120,16 +132,17 @@ class FileInspectionDialog(DialogClass, DialogBaseClass):
             return indices
 
         def get_rows(indices):
+            dataframe = self.data_info_table_view.model()._dataFrame
             model = self.file_structure_tree_view.model()
-            nodes = (self.source_model.get_node(index) for index in indices)
+            nodes = (model.get_node(index) for index in indices)
             paths = [n.directory for n in nodes]
-            mask = np.isin(self._dataFrame['Path'], paths)
-            return self._dataFrame.index[mask].values
+            mask = np.isin(dataframe['Path'], paths)
+            return mask
 
         def get_data(indices):
             model = self.file_structure_tree_view.model()
             nodes = (model.get_node(index) for index in indices)
-            data = [[str(getattr(node, self._column_to_attribute[c])) for c in self.columns] for node in nodes]
+            data = [[str(getattr(node, attr)) for attr in self.attributes] for node in nodes]
 
             return data
 
@@ -139,8 +152,6 @@ class FileInspectionDialog(DialogClass, DialogBaseClass):
         dif = len(selected) - len(deselected)
         model = self.data_info_table_view.model()
         dataframe = model.dataFrame()
-        print('model is view: {}'.format(model is self.data_info_table_view.model()))
-        print('dataframe is view: {}'.format(dataframe is model._dataFrame))
 
         if dif > 0:
             model.addDataFrameRows(dif)
@@ -162,62 +173,3 @@ class FileInspectionDialog(DialogClass, DialogBaseClass):
         model.layoutChanged.emit()
         dataframe.reset_index(drop=True, inplace=True)
         return True
-
-
-class _FileInspectionDialog(QtWidgets.QDialog, Ui_file_inspection_dialog):
-    def __init__(self, filename, parent=None):
-        super().__init__(parent)
-        self.setupUi(self)
-        self._setup_models()
-        self._get_file_info(filename)
-
-    def _setup_models(self):
-        # mime_type = models.DraggableTreeModel.mime_type
-        dataframe = pd.DataFrame(columns=['node', 'path'])
-        images_model = models.DroppableListModel(dataframe, copy=True)
-        self.images_list_view.setModel(images_model)
-        # self.images_list_view.set_drop_sources(self.file_structure_tree_view)
-        roi_model = models.DroppableListModel(dataframe, copy=True)
-        self.roi_list_view.setModel(roi_model)
-        # self.roi_list_view.set_drop_sources(self.file_structure_tree_view)
-
-    def _drop_signals_setup(self):
-        image_model = self.images_list_view.model()
-        image_model.item_dropped.connect(lambda: self.file_structure_tree_view.clearSelection())
-        self.images_sort_button.clicked.connect(lambda: image_model.sort(0))
-        self.images_clear_button.clicked.connect(lambda: image_model.clear())
-
-        roi_model = self.roi_list_view.model()
-        roi_model.item_dropped.connect(lambda: self.file_structure_tree_view.clearSelection())
-        self.roi_sort_button.clicked.connect(lambda: roi_model.sort(0))
-        self.roi_clear_button.clicked.connect(lambda: roi_model.clear())
-
-    def _get_file_info(self, filename):
-        extra_column_names = ['Shape', 'Type']
-        extra_node_attributes = ['shape', 'dtype']
-        root = load_node_from_hdf5(filename, *extra_node_attributes)
-        model = models.DraggableTreeModel(root)
-        self.file_structure_tree_view.setModel(model)
-
-        self._drop_signals_setup()
-
-        selection_model = self.file_structure_tree_view.selectionModel()
-        columns_to_node_attributes = OrderedDict(zip(extra_column_names,
-                                                     extra_node_attributes))
-        table_model = models.ItemInfoTableModel(
-            selection_model, model, columns_to_node_attributes)
-        self.data_info_table_view.setModel(table_model)
-
-
-def test():
-    filename = os.path.join(UI_DIR, 'test_file_info_dialog.h5')
-    filename = os.path.abspath(filename)
-    # print(filename)
-    app = QtWidgets.QApplication(sys.argv)
-    dialog = FileInspectionDialog(filename)
-    dialog.show()
-    sys.exit(app.exec_())
-
-if __name__ == "__main__":
-    # run()
-    test()

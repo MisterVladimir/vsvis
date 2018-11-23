@@ -35,11 +35,13 @@ if __name__ == '__main__':
     ver = '0.1'
     url = r'https://github.com/MisterVladimir/vsvis'
     setup(name='vsvis',
-          version=ver,
           packages=find_packages(),
+          version=ver,
           ext_modules=[],
           python_requires='>=3.6',
           install_requires=get_requirements(),
+          setup_requires=["pytest-runner"],
+          tests_require=["pytest", "pytest-qt", "pytest-cov", "pandas"],
           include_package_data=True,
           author='Vladimir Shteyn',
           author_email='vladimir.shteyn@googlemail.com',
@@ -51,4 +53,5 @@ if __name__ == '__main__':
               'Intended Audience :: Science/Research',
               'Topic :: Scientific/Engineering :: Medical Science Apps.',
               'Topic :: Scientific/Engineering :: Image Recognition',
+              'Programming Language :: Python :: 3.6',
               'Programming Language :: Python :: 3.7'])

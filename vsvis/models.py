@@ -28,7 +28,7 @@ from itertools import count
 from collections import OrderedDict
 from pandas import DataFrame
 from qtpandas.models.DataFrameModel import DataFrameModel as _DataFrameModel
-from typing import Optional
+from typing import Optional, Union
 
 NodeInfo = namedtuple('NodeInfo', ['name', 'path'])
 
@@ -40,6 +40,7 @@ class NodeTreeModel(QtCore.QAbstractItemModel):
 
     def get_node(self, index):
         if index.isValid():
+            # print('internal pointer: {}'.format(index.internalPointer()))
             return index.internalPointer()
         else:
             return self.root
@@ -73,22 +74,21 @@ class NodeTreeModel(QtCore.QAbstractItemModel):
         else:
             return self.createIndex(parent_node.row, 0, parent_node)
 
-    def data(self, index, role):
+    def data(self, index: QtCore.QModelIndex, role: int) -> Union[str, None]:
         if not index.isValid():
             return None
-
         node = index.internalPointer()
 
         if role == QtCore.Qt.DisplayRole:
             return node.name
 
-    def flags(self, index):
+    def flags(self, index: QtCore.QModelIndex):
         if index.isValid():
             return QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled
         else:
             return QtCore.Qt.NoItemFlags
 
-    def index(self, row, column, parent):
+    def index(self, row: int, column: int, parent: QtCore.QModelIndex) -> QtCore.QModelIndex:
         """
         Returns an index at the given row, column of the parent.
 
@@ -141,7 +141,8 @@ class DraggableTreeModel(NodeTreeModel):
 class DataFrameModel(_DataFrameModel):
     def __init__(self, dataframe=None, copy=True):
         super().__init__(dataframe, copy)
-        self.enableEditing()
+        if dataframe is not None:
+            self.enableEditing()
 
     def clear(self):
         """

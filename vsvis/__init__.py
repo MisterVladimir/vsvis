@@ -23,3 +23,4 @@ import os
 # https://stackoverflow.com/questions/25389095/python-get-path-of-root-project-structure
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 UI_DIR = os.path.join(ROOT_DIR, 'ui')
+TEST_DIR = os.path.join(ROOT_DIR, 'tests')
