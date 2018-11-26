@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import numpy as np
 import sys
 import os
-from PyQt5 import QtCore, QtWidgets, uic
+from qtpy import QtCore, QtWidgets, uic
 import pandas as pd
 from typing import Union, Sequence, overload
 from anytree import Node
@@ -72,24 +72,20 @@ class LabeledListWidget(GroupBoxClass, GroupBoxBaseClass):
     @get_data.register(int)
     @get_data.register(slice)
     def _get_data(self, column):
-        model = self.list_view.model()
-        return model.dataFrame().iloc[:, column]
-
-    @get_data.register(Sequence[int])
-    def _get_data(self, column):
-        model = self.list_view.model()
-        return model.dataFrame().iloc[:, list(column)]
-
-    @get_data.register(Sequence[str])
-    def _get_data(self, column):
-        model = self.list_view.model()
-        return model.dataFrame().loc[:, list(column)]
+        dataframe = self.list_view.model().dataFrame()
+        return dataframe.iloc[:, column]
 
     @get_data.register(str)
     def _get_data(self, column):
-        model = self.list_view.model()
-        return model.dataFrame()[column]
+        dataframe = self.list_view.model().dataFrame()
+        return dataframe[column]
 
+    @get_data.register(list)
+    def _get_data(self, column):
+        dataframe = self.list_view.model().dataFrame()
+        column = [dataframe.columns.get_loc(c) if isinstance(c, str) else c
+                  for c in column]
+        return dataframe.iloc[:, list(column)]
 
 FileLoadingParameter = namedtuple(
     'FileLoadingParameter', ['attr', 'column', 'function'], defaults=[None])

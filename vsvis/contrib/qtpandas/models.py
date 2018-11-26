@@ -470,8 +470,8 @@ class DataFrameModel(QtCore.QAbstractTableModel):
     Attributes:
         timestampFormat (unicode): formatting string for conversion of timestamps to QtCore.QDateTime.
             Used in data method.
-        sortingAboutToStart (QtCore.pyqtSignal): emitted directly before sorting starts.
-        sortingFinished (QtCore.pyqtSignal): emitted, when sorting finished.
+        sortingAboutToStart (QtCore.Signal): emitted directly before sorting starts.
+        sortingFinished (QtCore.Signal): emitted, when sorting finished.
         dtypeChanged (Signal(columnName)): passed from related ColumnDtypeModel
             if a columns dtype has changed.
         changingDtypeFailed (Signal(columnName, index, dtype)):
@@ -520,11 +520,11 @@ class DataFrameModel(QtCore.QAbstractTableModel):
 
         if dataFrame is not None:
             self.setDataFrame(dataFrame)
+            self.enableEditing()
 
         self.dataChanged.emit()
 
         self._dataFrameOriginal = None
-        self.enableEditing()
 
     def dataFrame(self):
         """

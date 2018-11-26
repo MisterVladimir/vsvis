@@ -17,6 +17,11 @@ Installation
 Only installation from source is available right now.
 
 
+Test
+------------------
+python setup.py test
+
+
 Requirements
 ------------------
 pyqt

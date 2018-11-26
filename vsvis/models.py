@@ -23,7 +23,7 @@ import numpy as np
 import pandas as pd
 from anytree import Node, PreOrderIter
 from io import BytesIO
-from PyQt5 import QtCore
+from qtpy import QtCore
 from collections import namedtuple
 from itertools import count
 from collections import OrderedDict
@@ -257,7 +257,7 @@ class ListModel(DataFrameModel):
 class DroppableListModel(ListModel):
     """
     """
-    item_dropped = QtCore.pyqtSignal()
+    item_dropped = QtCore.Signal()
 
     def _parse_dropped_data(self, mime_data):
         byte_data = mime_data.data('application/node')

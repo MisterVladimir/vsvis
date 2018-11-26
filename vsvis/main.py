@@ -25,7 +25,7 @@ import numpy as np
 from pandas import DataFrame
 from anytree import Node, RenderTree
 from collections import OrderedDict, namedtuple
-from PyQt5 import QtCore, QtGui, QtWidgets
+from qtpy import QtCore, QtGui, QtWidgets
 
 from ui.file_inspection_dialog2 import Ui_file_inspection_dialog
 from vsvis import models
@@ -132,7 +132,7 @@ def run():
     sys.exit(app.exec_())
 
 
-def test_file_info_dialog():
+def run_file_info_dialog():
     from vsvis.file_inspection_dialog import (
         FileInspectionDialog, FileLoadingParameter)
     from vsvis import TEST_DIR
@@ -166,4 +166,4 @@ def test_file_info_dialog():
 
 if __name__ == "__main__":
     # run()
-    test_file_info_dialog()
+    run_file_info_dialog()
