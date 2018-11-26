@@ -175,71 +175,11 @@ class DataFrameModel(_DataFrameModel):
         return True
 
 
-class ItemInfoTableModel(DataFrameModel):
-    """
-    """
-    def __init__(self, source_selection_model, source_model, columns):
-        self._column_to_attribute = \
-            OrderedDict(zip(['Path', 'Name'], ['directory', 'name']))
-        self._column_to_attribute.update(columns)
-
-        super().__init__(pd.DataFrame(columns=self._column_to_attribute.keys()))
-
-        self.source_selection_model = source_selection_model
-        self.source_model = source_model
-        self.source_selection_model.selectionChanged[
-            QtCore.QItemSelection, QtCore.QItemSelection].connect(
-                lambda i, j: self.selection_changed(i, j))
-
-    def selection_changed(self, selected, deselected):
-        def filter_indices(indices):
-            nodes = (self.source_model.get_node(index) for index in indices)
-            mask = [hasattr(n, 'directory') for n in nodes]
-            indices = list(np.array(indices)[mask])
-            return indices
-
-        def get_rows(indices):
-            nodes = (self.source_model.get_node(index) for index in indices)
-            paths = [n.directory for n in nodes]
-            mask = np.isin(self._dataFrame['Path'], paths)
-            return self._dataFrame.index[mask].values
-
-        def get_data(indices):
-            columns = self._dataFrame.columns
-            nodes = (self.source_model.get_node(index) for index in indices)
-            data = [[str(getattr(node, self._column_to_attribute[c])) for c in columns] for node in nodes]
-
-            return data
-
-        selected = filter_indices(selected.indexes())
-        deselected = filter_indices(deselected.indexes())
-
-        dif = len(selected) - len(deselected)
-
-        if dif > 0:
-            self.addDataFrameRows(dif)
-        elif dif < 0:
-            rows = get_rows(deselected[-abs(dif):])
-            deselected = deselected[-abs(dif):]
-            self.removeDataFrameRows(rows)
-
-        # at this point all we need to do is replace
-        if len(deselected) > 0:
-            rows = get_rows(deselected)
-            data = get_data(selected[:len(deselected)])
-            self._dataFrame.iloc[rows, :] = data
-            selected = selected[len(deselected):]
-        if len(selected) > 0:
-            data = get_data(selected)
-            self._dataFrame.iloc[-abs(dif):, :] = data
-
-        self.layoutChanged.emit()
-        self._dataFrame.reset_index(drop=True, inplace=True)
-        return True
-        # adding selected indices
-
-
 class ListModel(DataFrameModel):
+    """
+    A list modeled as a pandas DataFrame. Visible items are in the first
+    column. Additional unseen data may be added in other columns.
+    """
     def headerData(self, *args):
         return None
 
@@ -256,6 +196,7 @@ class ListModel(DataFrameModel):
 
 class DroppableListModel(ListModel):
     """
+    A list model that can accept items dropped from the DraggableTreeModel.
     """
     item_dropped = QtCore.Signal()
 
@@ -298,22 +239,9 @@ class DroppableListModel(ListModel):
             if not self.addDataFrameRows(len(parsed.index)):
                 # BUG: need to remove extraneous rows if the addDataFrameRows
                 # operation failed halfway through
-                print('adding row failed')
                 return False
 
             self._dataFrame.iloc[begin_row:, :] = parsed.values
             self.item_dropped.emit()
             self.layoutChanged.emit()
             return True
-
-            for r, tup in zip(count(begin_row), parsed):
-                name_index = self.index(r, 0, QtCore.QModelIndex())
-                self.setData(name_index, tup.name)
-                path_index = self.index(r, 1, QtCore.QModelIndex())
-                self.setData(path_index, tup.path)
-
-            self.item_dropped.emit()
-            return True
-
-        else:
-            return False

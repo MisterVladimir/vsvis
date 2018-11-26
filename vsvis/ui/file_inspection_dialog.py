@@ -6,7 +6,7 @@
 #
 # WARNING! All changes made in this file will be lost!
 
-from qtpy import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 class Ui_file_inspection_dialog(object):
     def setupUi(self, file_inspection_dialog):
@@ -24,7 +24,7 @@ class Ui_file_inspection_dialog(object):
         self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.file_structure_groupbox)
         self.verticalLayout_3.setObjectName("verticalLayout_3")
         self.file_structure_tree_view = QtWidgets.QTreeView(self.file_structure_groupbox)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.file_structure_tree_view.sizePolicy().hasHeightForWidth())
@@ -40,7 +40,7 @@ class Ui_file_inspection_dialog(object):
         self.verticalLayout_3.addWidget(self.file_structure_tree_view)
         self.horizontalLayout.addWidget(self.file_structure_groupbox)
         self.data_preview_groupbox = QtWidgets.QGroupBox(self.main_widget)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.data_preview_groupbox.sizePolicy().hasHeightForWidth())
@@ -49,7 +49,7 @@ class Ui_file_inspection_dialog(object):
         self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.data_preview_groupbox)
         self.verticalLayout_2.setObjectName("verticalLayout_2")
         self.data_preview_table_view = QtWidgets.QTableView(self.data_preview_groupbox)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.data_preview_table_view.sizePolicy().hasHeightForWidth())

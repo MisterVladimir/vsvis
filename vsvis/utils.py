@@ -58,17 +58,7 @@ def _recursively_load_as_node(grp, path, node, *args, **kwargs):
         >>> nodepath(dataset1)
         '/group1/group2/dataset1/'
         """
-        if len(node.path) == 1:
-            print('nodepath root')
-            return ''
-        else:
-            result = str(node).split("'")[1][5:] + '/'
-            # result = '/' + '/'.join([n.name for n in node.path[1:]]) + '/'
-            # print('nodepath: {}'.format(result))
-        return result
-        # return '/' + '/'.join([n.name for n in node.path[1:]]) + '/'
-        
-        # return str(node).split("'")[1][5:] + '/'
+        return str(node).split("'")[1][5:] + '/'
 
     row = 0
     for key, item in grp[path].items():

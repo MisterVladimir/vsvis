@@ -23,14 +23,14 @@ import sys
 import os
 from qtpy import QtCore, QtWidgets, uic
 import pandas as pd
-from typing import Union, Sequence, overload
+from typing import Sequence, Optional
 from anytree import Node
 from collections import OrderedDict, namedtuple
-from vladutils.decorators import methdispatch
+from vladutils.decorators import methdispatch as method_dispatch
 
 from . import models
 from .utils import load_node_from_hdf5
-from . import UI_DIR
+from . import UI_DIR, TEST_DIR
 
 
 DialogClass, DialogBaseClass = uic.loadUiType(
@@ -41,7 +41,11 @@ GroupBoxClass, GroupBoxBaseClass = uic.loadUiType(
 
 
 class LabeledListWidget(GroupBoxClass, GroupBoxBaseClass):
-    def __init__(self, title: str, parent: QtWidgets.QWidget = None):
+    """
+    A ListWidget inside a GroupBox, with buttons on the bottom to modify
+    the contents of the list.
+    """
+    def __init__(self, title: str, parent: Optional[QtWidgets.QWidget] = None):
         super().__init__(parent)
         self.setupUi(self)
         self.groupbox.setTitle(title)
@@ -60,12 +64,20 @@ class LabeledListWidget(GroupBoxClass, GroupBoxBaseClass):
 
     def _connect_buttons(self):
         model = self.model()
+        # https://stackoverflow.com/questions/21586643/pyqt-widget-connect-and-disconnect
+        for button in (self.sort_button, self.delete_button, self.clear_button):
+            while True:
+                try:
+                    button.clicked.disconnect()
+                except TypeError:
+                    break
+
         self.sort_button.clicked.connect(lambda: model.sort(0))
         self.delete_button.clicked.connect(
             lambda: self._delete(self.list_view.selectedIndexes()))
         self.clear_button.clicked.connect(lambda: model.clear())
 
-    @methdispatch
+    @method_dispatch
     def get_data(self, column=None):
         return self.model().dataFrame()
 
@@ -83,6 +95,8 @@ class LabeledListWidget(GroupBoxClass, GroupBoxBaseClass):
     @get_data.register(list)
     def _get_data(self, column):
         dataframe = self.list_view.model().dataFrame()
+        # a hack until I figure out a way to dispatch by the type
+        # contained within the list
         column = [dataframe.columns.get_loc(c) if isinstance(c, str) else c
                   for c in column]
         return dataframe.iloc[:, list(column)]
@@ -95,13 +109,14 @@ class FileInspectionDialog(DialogClass, DialogBaseClass):
     def __init__(self, parent: QtWidgets.QWidget = None):
         super().__init__(parent)
         self.setupUi(self)
-        self.list_widgets = {}
+        self.list_widgets = dict()
         self.filename = None
         self.columns = []
         self.attributes = []
         self._model_setup()
 
     def _model_setup(self):
+        # setup empty model for the tree view
         root = Node('root')
         model = models.DraggableTreeModel(root, [])
         self.file_structure_tree_view.setModel(model)
@@ -127,12 +142,10 @@ class FileInspectionDialog(DialogClass, DialogBaseClass):
 
         selection_model = self.file_structure_tree_view.selectionModel()
         try:
-            selection_model.disconnect(self.file_selection_changed)
-        except Exception:
+            selection_model.selectionChanged.disconnect(self.file_selection_changed)
+        except TypeError:
             pass
-        selection_model.selectionChanged[
-            QtCore.QItemSelection, QtCore.QItemSelection].connect(
-                lambda i, j: self.file_selection_changed())
+        selection_model.selectionChanged.connect(lambda: self.file_selection_changed())
 
     def add_list_widget(
             self, title: str, columns: Sequence[str]) -> bool:
@@ -154,6 +167,12 @@ class FileInspectionDialog(DialogClass, DialogBaseClass):
         return True
 
     def file_selection_changed(self):
+        """
+        Every time the TreeView's selection is changed, update the TableModel
+        to reflect the current selection. This isn't the most computatoinally
+        efficient implementation -- it would be better to look for differnces,
+        and update only those -- but this is much simpler.
+        """
         table_model = self.data_preview_table_view.model()
         tree_model = self.file_structure_tree_view.model()
         indices = self.file_structure_tree_view.selectedIndexes()
@@ -170,53 +189,32 @@ class FileInspectionDialog(DialogClass, DialogBaseClass):
         table_model.layoutChanged.emit()
         return True
 
-        def filter_indices(indices):
-            model = self.file_structure_tree_view.model()
-            nodes = (model.get_node(index) for index in indices)
-            mask = [hasattr(n, 'directory') for n in nodes]
-            indices = list(np.array(indices)[mask])
-            return indices
 
-        def get_masked_index(indices):
-            dataframe = self.data_preview_table_view.model()._dataFrame
-            model = self.file_structure_tree_view.model()
-            nodes = (model.get_node(index) for index in indices)
-            paths = [n.directory for n in nodes]
-            mask = np.isin(dataframe['Path'], paths)
-            return mask
+def _make_dialog_base(filename):
+    dialog = FileInspectionDialog()
 
-        def get_data(indices):
-            model = self.file_structure_tree_view.model()
-            nodes = (model.get_node(index) for index in indices)
-            data = [[str(getattr(node, attr)) for attr in self.attributes] for node in nodes]
+    parameters = [
+        FileLoadingParameter(
+            attr='name',
+            column='Name',
+            function=lambda dset: getattr(dset, 'name').split('/')[-1]),
+        FileLoadingParameter(
+            attr='directory',
+            column='Path',
+            function=lambda dset: getattr(dset, 'name')),
+        FileLoadingParameter(
+            attr='shape', column='Shape'),
+        FileLoadingParameter(
+            attr='dtype',
+            column="Type",
+            function=lambda dset: str(getattr(dset, 'dtype')))]
 
-            return data
+    dialog.load_file(filename, *parameters)
+    return dialog
 
-        selected = filter_indices(selected.indexes())
-        deselected = filter_indices(deselected.indexes())
 
-        dif = len(selected) - len(deselected)
-        model = self.data_preview_table_view.model()
-        dataframe = model.dataFrame()
-
-        if dif > 0:
-            model.addDataFrameRows(dif)
-        elif dif < 0:
-            mask = get_masked_index(deselected[-abs(dif):])
-            rows = np.arange(self._dataFrame.rowCount())[mask]
-            deselected = deselected[-abs(dif):]
-            model.removeDataFrameRows(rows)
-
-        # at this point all we need to do is replace
-        if len(deselected) > 0:
-            mask = get_masked_index(deselected)
-            data = get_data(selected[:len(deselected)])
-            dataframe.loc[mask, :] = data
-            selected = selected[len(deselected):]
-        if len(selected) > 0:
-            data = get_data(selected)
-            dataframe.iloc[-abs(dif):, :] = data
-
-        model.layoutChanged.emit()
-        dataframe.reset_index(drop=True, inplace=True)
-        return True
+def make_dialog(filename):
+    dialog = _make_dialog_base(filename)
+    dialog.add_list_widget('ROI', ['name', 'directory'])
+    dialog.add_list_widget('Images', ['name', 'directory'])
+    return dialog

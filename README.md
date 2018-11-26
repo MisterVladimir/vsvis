@@ -25,6 +25,9 @@ python setup.py test
 Requirements
 ------------------
 pyqt
+qtpy
+pandas
+anytree
 
 
 License
