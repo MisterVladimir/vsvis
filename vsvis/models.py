@@ -20,32 +20,35 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import pickle
 import numpy as np
+import pandas as pd
 from anytree import Node, PreOrderIter
 from io import BytesIO
 from PyQt5 import QtCore
 from collections import namedtuple
 from itertools import count
 from collections import OrderedDict
-from pandas import DataFrame
-from qtpandas.models.DataFrameModel import DataFrameModel as _DataFrameModel
-from typing import Optional, Union
+from typing import Optional, Union, Sequence
+from ordered_set import OrderedSet
 
-NodeInfo = namedtuple('NodeInfo', ['name', 'path'])
+
+from .contrib.qtpandas.models import DataFrameModel as _DataFrameModel
+
+# NodeInfo = namedtuple('NodeInfo', ['name', 'path'])
 
 
 class NodeTreeModel(QtCore.QAbstractItemModel):
-    def __init__(self, root, parent=None):
+    def __init__(self, root: Node, parent: QtCore.QObject = None):
         super().__init__(parent)
         self.root = root
 
-    def get_node(self, index):
+    def get_node(self, index: QtCore.QModelIndex):
         if index.isValid():
             # print('internal pointer: {}'.format(index.internalPointer()))
             return index.internalPointer()
         else:
             return self.root
 
-    def rowCount(self, parent):
+    def rowCount(self, parent: QtCore.QModelIndex):
         """
         Parameters
         ------------
@@ -109,38 +112,51 @@ class NodeTreeModel(QtCore.QAbstractItemModel):
 
 
 class DraggableTreeModel(NodeTreeModel):
-    def __init__(self, root, parent=None):
+    def __init__(self, root: Node, attributes: Sequence[str], parent=None):
         super().__init__(root, parent)
+        self.attributes = attributes
 
-    def _encode_nodes(self, *nodes: Node) -> QtCore.QMimeData:
-        # namedtuple masquerading as Node with the relevant info
-        node_info = [NodeInfo(node.name, node.path) for node in nodes]
-        byte = BytesIO()
-        pickle.dump(node_info, byte)
-        byte.seek(0)
-        qbyte = QtCore.QByteArray(byte.read())
-        mime = QtCore.QMimeData()
-        mime.setData('application/node', qbyte)
-        return mime
+    def _encode_nodes(self, keys=None, *nodes: Node) -> QtCore.QMimeData:
+        if keys is None:
+            keys = self.attributes
+            attributes = self.attributes
+        elif isinstance(keys, dict):
+            keys = [keys[attr] if attr in keys else None for attr in self.attributes]
+            indices = np.flatnonzero(keys)
+            attributes = np.array(self.attributes)[indices]
+        elif set(keys).intersection(self.attributes):
+            keys = OrderedSet(keys)
+            attributes = OrderedSet(self.attributes)
+            keys = attributes = keys.intersection(attributes)
+
+        node_info = ([str(getattr(node, attr)) if hasattr(node, attr) else '' for node in nodes]
+                     for attr in attributes)
+        return dict(zip(keys, node_info))
+
 
     def flags(self, index: QtCore.QModelIndex):
         default = super().flags(index)
         if index.isValid():
-            return default | QtCore.Qt.ItemIsDragEnabled | QtCore.Qt.ItemIsDropEnabled
-        else:
-            return default
+            default |= (QtCore.Qt.ItemIsDragEnabled | QtCore.Qt.ItemIsDropEnabled)
+        return default
 
     def mimeTypes(self):
         return ['application/node']
 
-    def mimeData(self, indices) -> QtCore.QMimeData:
+    def get_nodes_as_dict(self, indices, keys=None):
         nodes = [self.get_node(index) for index in indices]
-        return self._encode_nodes(*nodes)
+        return self._encode_nodes(keys, *nodes)
+
+    def mimeData(self, indices) -> QtCore.QMimeData:
+        data = self.get_nodes_as_dict(indices)
+        mime = QtCore.QMimeData()
+        mime.setData('application/node', pickle.dumps(data))
+        return mime
 
 
 class DataFrameModel(_DataFrameModel):
-    def __init__(self, dataframe=None, copy=True):
-        super().__init__(dataframe, copy)
+    def __init__(self, dataframe=None):
+        super().__init__(dataframe)
         if dataframe is not None:
             self.enableEditing()
 
@@ -154,7 +170,7 @@ class DataFrameModel(_DataFrameModel):
         cols = self._dataFrame.columns
         nrows = self._dataFrame.shape[0]
         self.beginRemoveRows(QtCore.QModelIndex(), 0, nrows)
-        self._dataFrame = DataFrame(columns=cols)
+        self._dataFrame = pd.DataFrame(columns=cols)
         self.endRemoveRows()
         return True
 
@@ -167,7 +183,7 @@ class ItemInfoTableModel(DataFrameModel):
             OrderedDict(zip(['Path', 'Name'], ['directory', 'name']))
         self._column_to_attribute.update(columns)
 
-        super().__init__(DataFrame(columns=self._column_to_attribute.keys()))
+        super().__init__(pd.DataFrame(columns=self._column_to_attribute.keys()))
 
         self.source_selection_model = source_selection_model
         self.source_model = source_model
@@ -227,9 +243,6 @@ class ListModel(DataFrameModel):
     def headerData(self, *args):
         return None
 
-    def supportedDropActions(self):
-        return QtCore.Qt.CopyAction
-
     def data(self, index, role=QtCore.Qt.DisplayRole):
         roles = (QtCore.Qt.DisplayRole,
                  QtCore.Qt.EditRole,
@@ -246,13 +259,18 @@ class DroppableListModel(ListModel):
     """
     item_dropped = QtCore.pyqtSignal()
 
-    def __init__(self, dataframe: Optional[DataFrame] = None,
-                 copy: bool = False):
-        super().__init__(dataframe, copy)
+    def _parse_dropped_data(self, mime_data):
+        byte_data = mime_data.data('application/node')
+        as_dict = pickle.loads(byte_data)
+        as_dataframe = pd.DataFrame.from_dict(as_dict)
+        columns = np.isin(as_dataframe.columns, self._dataFrame.columns)
+        as_dataframe = as_dataframe.loc[:, columns]
+        as_dataframe = as_dataframe.loc[as_dataframe.all(1), :]
+        as_dataframe.astype(self._dataFrame.dtypes.to_dict(), copy=False)
+        return as_dataframe
 
-    def _parse_dropped_data(self, byte):
-        readable = BytesIO(byte.data('application/node'))
-        return pickle.load(readable)
+    def supportedDropActions(self):
+        return QtCore.Qt.CopyAction
 
     def flags(self, index: QtCore.QModelIndex):
         default = super().flags(index)
@@ -260,9 +278,6 @@ class DroppableListModel(ListModel):
 
     def mimeTypes(self):
         return ['application/node']
-
-    def supportedDropActions(self):
-        return QtCore.Qt.CopyAction
 
     def canDropMimeData(self, data: QtCore.QMimeData, *args):
         if any([data.hasFormat(typ) for typ in self.mimeTypes()]):
@@ -276,13 +291,20 @@ class DroppableListModel(ListModel):
         elif action == QtCore.Qt.IgnoreAction:
             return True
         elif action == QtCore.Qt.CopyAction:
-            begin_row = self.rowCount(QtCore.QModelIndex())
+            begin_row = self.rowCount()
             # parsed is a named tuple whose items are the string displayed
             # in the list, and the path to the data in the HDF5 file
             parsed = self._parse_dropped_data(data)
-            if not self.addDataFrameRows(len(parsed)):
-                # BUG: need to remove extraneous rows
+            if not self.addDataFrameRows(len(parsed.index)):
+                # BUG: need to remove extraneous rows if the addDataFrameRows
+                # operation failed halfway through
+                print('adding row failed')
                 return False
+
+            self._dataFrame.iloc[begin_row:, :] = parsed.values
+            self.item_dropped.emit()
+            self.layoutChanged.emit()
+            return True
 
             for r, tup in zip(count(begin_row), parsed):
                 name_index = self.index(r, 0, QtCore.QModelIndex())

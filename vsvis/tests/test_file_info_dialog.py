@@ -107,8 +107,8 @@ class TestFileInspectionDialog(AbstractTest):
         widget = self.create(qtbot)
         widget.load_file(self.h5file, *self.parameters)
 
-        table_view = widget.data_info_table_view
-        table_model = widget.data_info_table_view.model()
+        table_view = widget.data_preview_table_view
+        table_model = widget.data_preview_table_view.model()
         assert table_model.columnCount() == len(self.parameters)
 
     @pytest.mark.dependency(depends=['TestFileInspectioDialog::test_add_h5file'])
@@ -122,8 +122,8 @@ class TestFileInspectionDialog(AbstractTest):
     #     tree_view = widget.file_structure_tree_view
     #     tree_model = widget.file_structure_tree_view.model()
 
-    #     table_view = widget.data_info_table_view
-    #     table_model = widget.data_info_table_view.model()
+    #     table_view = widget.data_preview_table_view
+    #     table_model = widget.data_preview_table_view.model()
 
     #     # test whether clicking on an index selects it
     #     # and whether clicking on a tree item that corresponds to a dataset

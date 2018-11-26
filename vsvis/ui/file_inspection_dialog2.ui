@@ -52,7 +52,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QGroupBox" name="data_info_groupbox">
+       <widget class="QGroupBox" name="data_preview_groupbox">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
           <horstretch>0</horstretch>
@@ -64,7 +64,7 @@
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_2">
          <item>
-          <widget class="QTableView" name="data_info_table_view">
+          <widget class="QTableView" name="data_preview_table_view">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
              <horstretch>0</horstretch>

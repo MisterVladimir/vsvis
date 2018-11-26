@@ -122,7 +122,7 @@ class FileInspectionDialog(QtWidgets.QDialog, Ui_file_inspection_dialog):
                                                      extra_node_attributes))
         table_model = models.ItemInfoTableModel(
             selection_model, model, columns_to_node_attributes)
-        self.data_info_table_view.setModel(table_model)
+        self.data_preview_table_view.setModel(table_model)
 
 
 def run():
@@ -133,26 +133,34 @@ def run():
 
 
 def test_file_info_dialog():
-    from vsvis.file_inspection_dialog import FileInspectionDialog, FileLoadingParameter
+    from vsvis.file_inspection_dialog import (
+        FileInspectionDialog, FileLoadingParameter)
     from vsvis import TEST_DIR
 
-    filename = os.path.abspath(os.path.join(TEST_DIR, 'data', 'test_file_info_dialog.h5'))
+    filename = os.path.abspath(os.path.join(
+        TEST_DIR, 'data', 'test_file_info_dialog.h5'))
     # print(filename)
     app = QtWidgets.QApplication(sys.argv)
     dialog = FileInspectionDialog()
 
     parameters = [
-        FileLoadingParameter(attr='name', column='Name'),
-        FileLoadingParameter(attr='directory',
-                             column='Path',
-                             function=lambda dset: getattr(dset, 'name')),
-        FileLoadingParameter(attr='shape', column='Shape'),
-        FileLoadingParameter(attr='dtype',
-                             column="Type",
-                             function=lambda dset: str(getattr(dset, 'dtype')))]
+        FileLoadingParameter(
+            attr='name',
+            column='Name',
+            function=lambda dset: getattr(dset, 'name').split('/')[-1]),
+        FileLoadingParameter(
+            attr='directory',
+            column='Path',
+            function=lambda dset: getattr(dset, 'name')),
+        FileLoadingParameter(
+            attr='shape', column='Shape'),
+        FileLoadingParameter(
+            attr='dtype',
+            column="Type",
+            function=lambda dset: str(getattr(dset, 'dtype')))]
 
     dialog.load_file(filename, *parameters)
-    dialog.add_list_widget('title', ['Name', "Path"])
+    dialog.add_list_widget('title', ['name', 'directory'])
     dialog.show()
     sys.exit(app.exec_())
 
