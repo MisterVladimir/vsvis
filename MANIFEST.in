@@ -1,1 +1,2 @@
 include vsvis/tests/data/*
+include vsvis/ui/*

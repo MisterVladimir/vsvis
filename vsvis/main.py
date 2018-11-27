@@ -20,16 +20,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import os
 import sys
+import re
 from qtpy import QtWidgets
 
-from vsvis.main_window import VMainWindow
-from vsvis.file_inspection_dialog import FileLoadingParameter, FileInspectionDialog
+from vsvis.main_window import make_main_window, DataInspectorWidget
+from vsvis.file_inspection_dialog import (FileLoadingParameter,
+                                          FileInspectionDialog)
 from vsvis import TEST_DIR
 
 
 def example_app():
     app = QtWidgets.QApplication(sys.argv)
-    main_window = VMainWindow(QtWidgets.QWidget)
+    main_window = make_main_window(DataInspectorWidget)
     main_window.show()
     sys.exit(app.exec_())
 
@@ -45,11 +47,21 @@ def example_file_info_dialog():
     app = QtWidgets.QApplication(sys.argv)
     dialog = FileInspectionDialog()
 
+    def get_name(dset):
+        regexp = re.compile(r'[a-zA-Z]+')
+        name = getattr(dset, 'name')
+        name = name.split('/')[-1]
+        print(name)
+        if regexp.search(name):
+            return name
+        else:
+            return '{:0>5}'.format(name)
+
     parameters = [
         FileLoadingParameter(
             attr='name',
             column='Name',
-            function=lambda dset: getattr(dset, 'name').split('/')[-1]),
+            function=get_name),
         FileLoadingParameter(
             attr='directory',
             column='Path',

@@ -19,6 +19,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import numpy as np
+import re
 import sys
 import os
 from qtpy import QtCore, QtWidgets, uic
@@ -28,7 +29,8 @@ from anytree import Node
 from collections import OrderedDict, namedtuple
 from vladutils.decorators import methdispatch as method_dispatch
 
-from . import models
+from .models.tree import DraggableTreeModel
+from .models.table import DroppableListModel, DataFrameModel
 from .utils import load_node_from_hdf5
 from . import UI_DIR, TEST_DIR
 
@@ -46,14 +48,14 @@ class LabeledListWidget(GroupBoxClass, GroupBoxBaseClass):
     the contents of the list.
     """
     def __init__(self, title: str, parent: Optional[QtWidgets.QWidget] = None):
-        super().__init__(parent)
+        super(GroupBoxBaseClass, self).__init__(parent)
         self.setupUi(self)
         self.groupbox.setTitle(title)
 
     def model(self):
         return self.list_view.model()
 
-    def setModel(self, model: models.DroppableListModel) -> None:
+    def setModel(self, model: DroppableListModel) -> None:
         self.list_view.setModel(model)
         self._connect_buttons()
 
@@ -107,7 +109,7 @@ FileLoadingParameter = namedtuple(
 
 class FileInspectionDialog(DialogClass, DialogBaseClass):
     def __init__(self, parent: QtWidgets.QWidget = None):
-        super().__init__(parent)
+        super(DialogBaseClass, self).__init__(parent)
         self.setupUi(self)
         self.list_widgets = dict()
         self.filename = None
@@ -118,7 +120,7 @@ class FileInspectionDialog(DialogClass, DialogBaseClass):
     def _model_setup(self):
         # setup empty model for the tree view
         root = Node('root')
-        model = models.DraggableTreeModel(root, [])
+        model = DraggableTreeModel(root, [])
         self.file_structure_tree_view.setModel(model)
 
     def load_file(self, filename: str, *parameters: FileLoadingParameter):
@@ -137,7 +139,7 @@ class FileInspectionDialog(DialogClass, DialogBaseClass):
         tree_model.layoutChanged.emit()
 
         dataframe = pd.DataFrame(columns=self.columns)
-        table_model = models.DataFrameModel(dataframe)
+        table_model = DataFrameModel(dataframe)
         self.data_preview_table_view.setModel(table_model)
 
         selection_model = self.file_structure_tree_view.selectionModel()
@@ -158,7 +160,7 @@ class FileInspectionDialog(DialogClass, DialogBaseClass):
         widget = LabeledListWidget(title, self.data_preview_groupbox)
         self.list_layout.addWidget(widget)
         dataframe = pd.DataFrame(columns=columns)
-        model = models.DroppableListModel(dataframe)
+        model = DroppableListModel(dataframe)
         widget.setModel(model)
 
         self.list_layout.addWidget(widget)
@@ -193,11 +195,21 @@ class FileInspectionDialog(DialogClass, DialogBaseClass):
 def _make_dialog_base(filename):
     dialog = FileInspectionDialog()
 
+    def get_name(dset):
+        # pads numbers with zeros
+        regexp = re.compile(r'[a-zA-Z]+')
+        name = getattr(dset, 'name')
+        name = name.split('/')[-1]
+        if regexp.search(name):
+            return name
+        else:
+            return '{:0>5}'.format(name)
+
     parameters = [
         FileLoadingParameter(
             attr='name',
             column='Name',
-            function=lambda dset: getattr(dset, 'name').split('/')[-1]),
+            function=get_name),
         FileLoadingParameter(
             attr='directory',
             column='Path',

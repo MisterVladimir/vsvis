@@ -30,20 +30,27 @@ class VGraphicsView(QtWidgets.QGraphicsView):
     # sensitivity to zoom
     zoom_rate = 1.1
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
     def wheelEvent(self, event):
         factor = self.zoom_rate**(event.angleDelta().y() / 120.)
         self.scale(factor, factor)
-        # event.accept()
 
-    def keyPressEvent(self, event):
-        if event.key() == QtCore.Qt.Key_Equal:
-            self.scale(self.zoom_rate, self.zoom_rate)
-        elif event.key() == QtCore.Qt.Key_Minus:
-            self.scale(1. / self.zoom_rate, 1 / self.zoom_rate)
-        # event.accept()
+    @QtCore.Slot()
+    def zoom_in(self):
+        self.scale(self.zoom_rate, self.zoom_rate)
 
+    @QtCore.Slot()
+    def zoom_out(self):
+        self.scale(1. / self.zoom_rate, 1. / self.zoom_rate)
+
+    @QtCore.Slot()
     def fit_to_window(self):
         self.fitInView(self.sceneRect(), QtCore.Qt.KeepAspectRatio)
+
+
+class VProbabilitySlider(QtWidgets.QSlider):
+    @QtCore.Slot(int)
+    def activate(self, index):
+        if index == 0:
+            self.setEnabled(False)
+        elif index == 1:
+            self.setEnabled(True)

@@ -1,0 +1,13 @@
+<RCC>
+  <qresource prefix="icons">
+    <file alias="zoom_out_small">icons/magnifying_glass_zoom_in.png</file>
+    <file alias="zoom_out_medium">icons/magnifying_glass_zoom_in_1.5X.png</file>
+    <file alias="zoom_out_large">icons/magnifying_glass_zoom_in_2X.png</file>
+    <file alias="zoom_in_small">icons/magnifying_glass_zoom_out.png</file>
+    <file alias="zoom_in_medium">icons/magnifying_glass_zoom_out_1.5X.png</file>
+    <file alias="zoom_in_large">icons/magnifying_glass_zoom_out_2X.png</file>
+    <file alias="resize_small">icons/resize.png</file>
+    <file alias="resize_medium">icons/resize_1.5X.png</file>
+    <file alias="resize_large">icons/resize_2X.png</file>
+  </qresource>
+</RCC>

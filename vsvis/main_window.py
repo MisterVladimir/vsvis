@@ -18,12 +18,23 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-from qtpy import QtCore, QtWidgets
+from qtpy import QtCore, QtWidgets, uic
+import os
 
 from .file_inspection_dialog import make_dialog
+from . import UI_DIR
+from .models.scene import VScene
 
 
 tr = QtCore.QObject.tr
+DataInspectorClass, DataInspectorBaseClass = uic.loadUiType(
+    os.path.join(UI_DIR, 'data_inspector_widget.ui'))
+
+
+class DataInspectorWidget(DataInspectorClass, DataInspectorBaseClass):
+    def __init__(self, parent=None):
+        super(DataInspectorBaseClass, self).__init__(parent)
+        self.setupUi(self)
 
 
 class VMainWindow(QtWidgets.QMainWindow):
@@ -69,3 +80,10 @@ class VMainWindow(QtWidgets.QMainWindow):
         self.setWindowTitle(tr(self, "MainWindow"))
         self.menu_file.setTitle(tr(self, "File"))
         self.action_open.setText(tr(self, "Open..."))
+
+
+def make_main_window(central_widget_class, *args, **kwargs):
+    window = VMainWindow(central_widget_class)
+    scene = VScene(['ground_truth', 'predicted'])
+    window.central_widget.graphics_view.setScene(scene)
+    return window
