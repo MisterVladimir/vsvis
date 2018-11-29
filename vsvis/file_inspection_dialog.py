@@ -24,7 +24,7 @@ import sys
 import os
 from qtpy import QtCore, QtWidgets, uic
 import pandas as pd
-from typing import Sequence, Optional
+from typing import Sequence, Optional, Dict
 from anytree import Node
 from collections import OrderedDict, namedtuple
 from vladutils.decorators import methdispatch as method_dispatch
@@ -81,18 +81,18 @@ class LabeledListWidget(GroupBoxClass, GroupBoxBaseClass):
 
     @method_dispatch
     def get_data(self, column=None):
-        return self.model().dataFrame()
+        return self.model().dataFrame().values
 
     @get_data.register(int)
     @get_data.register(slice)
     def _get_data(self, column):
         dataframe = self.list_view.model().dataFrame()
-        return dataframe.iloc[:, column]
+        return dataframe.iloc[:, column].values
 
     @get_data.register(str)
     def _get_data(self, column):
         dataframe = self.list_view.model().dataFrame()
-        return dataframe[column]
+        return dataframe[column].values
 
     @get_data.register(list)
     def _get_data(self, column):
@@ -101,7 +101,7 @@ class LabeledListWidget(GroupBoxClass, GroupBoxBaseClass):
         # contained within the list
         column = [dataframe.columns.get_loc(c) if isinstance(c, str) else c
                   for c in column]
-        return dataframe.iloc[:, list(column)]
+        return dataframe.iloc[:, list(column)].values
 
 FileLoadingParameter = namedtuple(
     'FileLoadingParameter', ['attr', 'column', 'function'], defaults=[None])
@@ -225,8 +225,8 @@ def _make_dialog_base(filename):
     return dialog
 
 
-def make_dialog(filename):
+def make_dialog(filename: str, names: Dict) -> QtWidgets.QDialog:
     dialog = _make_dialog_base(filename)
-    dialog.add_list_widget('ROI', ['name', 'directory'])
-    dialog.add_list_widget('Images', ['name', 'directory'])
+    for k, v in names.items():
+        dialog.add_list_widget(k, v)
     return dialog

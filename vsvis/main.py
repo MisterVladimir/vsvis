@@ -23,7 +23,7 @@ import sys
 import re
 from qtpy import QtWidgets
 
-from vsvis.main_window import make_main_window, DataInspectorWidget
+from vsvis.main_window import VMainWindow
 from vsvis.file_inspection_dialog import (FileLoadingParameter,
                                           FileInspectionDialog)
 from vsvis import TEST_DIR
@@ -31,7 +31,7 @@ from vsvis import TEST_DIR
 
 def example_app():
     app = QtWidgets.QApplication(sys.argv)
-    main_window = make_main_window(DataInspectorWidget)
+    main_window = VMainWindow()
     main_window.show()
     sys.exit(app.exec_())
 
