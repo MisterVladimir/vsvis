@@ -33,6 +33,7 @@ from .models.tree import DraggableTreeModel
 from .models.table import DroppableListModel, DataFrameModel
 from .utils import load_node_from_hdf5
 from . import UI_DIR, TEST_DIR
+from .enums import DataType
 
 
 DialogClass, DialogBaseClass = uic.loadUiType(
@@ -81,18 +82,18 @@ class LabeledListWidget(GroupBoxClass, GroupBoxBaseClass):
 
     @method_dispatch
     def get_data(self, column=None):
-        return self.model().dataFrame().values
+        return self.model().dataFrame()
 
     @get_data.register(int)
     @get_data.register(slice)
     def _get_data(self, column):
         dataframe = self.list_view.model().dataFrame()
-        return dataframe.iloc[:, column].values
+        return dataframe.iloc[:, column]
 
     @get_data.register(str)
     def _get_data(self, column):
         dataframe = self.list_view.model().dataFrame()
-        return dataframe[column].values
+        return dataframe[column]
 
     @get_data.register(list)
     def _get_data(self, column):
@@ -101,16 +102,18 @@ class LabeledListWidget(GroupBoxClass, GroupBoxBaseClass):
         # contained within the list
         column = [dataframe.columns.get_loc(c) if isinstance(c, str) else c
                   for c in column]
-        return dataframe.iloc[:, list(column)].values
+        return dataframe.iloc[:, list(column)]
 
 FileLoadingParameter = namedtuple(
     'FileLoadingParameter', ['attr', 'column', 'function'], defaults=[None])
 
 
 class FileInspectionDialog(DialogClass, DialogBaseClass):
-    def __init__(self, parent: QtWidgets.QWidget = None):
+    def __init__(self, ID, parent: QtWidgets.QWidget = None):
+        # XXX: might not need ID: DataType afterall
         super(DialogBaseClass, self).__init__(parent)
         self.setupUi(self)
+        self.ID = ID
         self.list_widgets = dict()
         self.filename = None
         self.columns = []
@@ -192,8 +195,8 @@ class FileInspectionDialog(DialogClass, DialogBaseClass):
         return True
 
 
-def _make_dialog_base(filename):
-    dialog = FileInspectionDialog()
+def _make_dialog_base(filename, ID):
+    dialog = FileInspectionDialog(ID)
 
     def get_name(dset):
         # pads numbers with zeros
@@ -225,8 +228,8 @@ def _make_dialog_base(filename):
     return dialog
 
 
-def make_dialog(filename: str, names: Dict) -> QtWidgets.QDialog:
-    dialog = _make_dialog_base(filename)
+def make_dialog(filename: str, names: Dict, ID: DataType) -> QtWidgets.QDialog:
+    dialog = _make_dialog_base(filename, ID)
     for k, v in names.items():
         dialog.add_list_widget(k, v)
     return dialog

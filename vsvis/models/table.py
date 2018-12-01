@@ -131,6 +131,7 @@ class HDF5TableModel(QtCore.QAbstractTableModel):
                  show_row_index: bool = True):
 
         self._datasets = datasets
+        self._set_row_count(min([dset.shape[0] for dset in datasets]))
         self._show_row_index = show_row_index
 
         column_lengths = [dset.shape[1] for dset in datasets]
@@ -143,11 +144,14 @@ class HDF5TableModel(QtCore.QAbstractTableModel):
 
         assert self._cum_col_lengths[-1] == len(self._columns)
 
+    def _set_row_count(self, count):
+        self._row_count = count
+
     def rowCount(self):
-        return self._root.shape[0]
+        return self._row_count
 
     def columnCount(self):
-        return len(self._columns)
+        return len(self._columns) + int(self._show_row_index)
 
     def headerData(self, section: int, orientation: int = QtCore.Qt.Horizontal,
                    role: int = QtCore.Qt.DisplayRole):
@@ -158,7 +162,7 @@ class HDF5TableModel(QtCore.QAbstractTableModel):
             return None
 
     def data(self, index: QtCore.QModelIndex,
-             role: int = QtCore.Qt.DisplayRole):
+             role: int = QtCore.Qt.DisplayRole) -> Union[float, str]:
         if not index.isValid():
             return None
         elif role == QtCore.Qt.DisplayRole:
@@ -191,7 +195,7 @@ class HDF5TableModel(QtCore.QAbstractTableModel):
             elif isinstance(value, numbers.Real):
                 return np.round(value, self.decimals)
             else:
-                return value
+                return str(value)
         else:
             return None
 
