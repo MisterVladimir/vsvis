@@ -131,7 +131,7 @@ class HDF5TableModel(QtCore.QAbstractTableModel):
                  show_row_index: bool = True):
 
         self._datasets = datasets
-        self._set_row_count(min([dset.shape[0] for dset in datasets]))
+        self._row_count = min([dset.shape[0] for dset in datasets])
         self._show_row_index = show_row_index
 
         column_lengths = [dset.shape[1] for dset in datasets]
@@ -143,9 +143,6 @@ class HDF5TableModel(QtCore.QAbstractTableModel):
             self._columns = list(columns)
 
         assert self._cum_col_lengths[-1] == len(self._columns)
-
-    def _set_row_count(self, count):
-        self._row_count = count
 
     def rowCount(self):
         return self._row_count

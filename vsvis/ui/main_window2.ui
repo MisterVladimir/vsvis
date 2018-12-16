@@ -158,7 +158,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QSlider" name="probability_slider">
+        <widget class="VProbabilitySlider" name="probability_slider">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
            <horstretch>0</horstretch>
@@ -501,12 +501,17 @@
   <customwidget>
    <class>VGraphicsView</class>
    <extends>QGraphicsView</extends>
-   <header>vsvis.promoted</header>
+   <header>vsvis.widgets</header>
    <slots>
     <slot>fit_to_window()</slot>
     <slot>zoom_out()</slot>
     <slot>zoom_in()</slot>
    </slots>
+  </customwidget>
+  <customwidget>
+   <class>VProbabilitySlider</class>
+   <extends>QSlider</extends>
+   <header>vsvis.widgets</header>
   </customwidget>
  </customwidgets>
  <resources>

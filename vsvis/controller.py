@@ -19,41 +19,91 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 from qtpy import QtCore, QtWidgets
+from typing import Dict, Any
 
 from .models.table import HDF5TableModel
+from .datasource import HDF5DataSource
 from .enums import DataType
+from .widgets import VTabWidget
 
 
 class Controller(QtCore.QObject):
     """
-    """
-    table_selection_changed = QtCore.Signal(
-        'QItemSelection', 'QItemSelection', object)
+    Coördinates the display of markers and images.
 
-    def __init__(self, scene, tabwidget, columns, datasources):
+    Parameters
+    ------------
+    scene : QtWidgets.QGraphicsScene
+    tabwidget : widgets.VTabWidget
+    columns : EnumDict
+    datasources : EnumDict
+    """
+    def __init__(self, scene: QtWidgets.QGraphicsScene, tabwidget: VTabWidget,
+                 columns: Dict[DataType, Any], datasources: Dict[DataType, Any]):
         start_index = 0
         self.scene = scene
         self.tabwidget = tabwidget
-        self.dtypes = list(self.tabwidget.keys())
-        # self.tableviews = tabwidget.values()
         self.datasources = datasources
         self.current_index = start_index
-        self._columns = columns
-        assert len(self.tableviews) == len(datasources)
-        assert len(columns) == len(self.tableviews)
-
-        self.change_table_models(start_index)
+        assert len(self.tabwidget) == len(datasources)
+        assert len(columns) == len(self.tabwidget)
 
     def _signals_setup(self):
         self.tabwidget.currentChanged[int].connect(self._tab_changed)
         for table in self.tabwidget.values():
+            table.selection_changed[
+                'QItemSelection', 'QItemSelection', object].connect(
+                self.toggle_visible_graphics_items)
 
+    @QtCore.Slot('QItemSelection', 'QItemSelection', object)
+    def toggle_visible_graphics_items(self, visible, invisible, dtype):
+        visible = [ind.row() for ind in visible.indexes()]
+        invisible = [ind.row() for ind in invisible.indexes()]
 
-    @QtCore.Slot('QItemSelection', 'QItemSelection')
-    def _emit_table_selection_changed(self, selected, deselected):
-        tab_index = self.tabwidget.currentIndex()
-        dtype = self.dtypes[tab_index]
-        self.table_selection_changed.emit(selected, deselected, dtype)
+        index = self.currentIndex
+        self.scene.set_markers_visible(index, dtype, True, visible)
+        self.scene.set_markers_visible(index, dtype, False, invisible)
+
+    @QtCore.Slot(int)
+    def _tab_changed(self, i):
+        if i == -1:
+            return None
+
+        index = self.currentIndex
+        for dtype in self.tabwidget.keys():
+            self.scene.set_markers_visible(index, dtype, False)
+
+        dtype = self.dtypes[i]
+        table = self.tabwidget[dtype]
+        ind = [ind.row() for ind in table.selectedIndexes()]
+        self.scene.set_markers_visible(index, dtype, True, ind)
+
+    @QtCore.Slot(int)
+    def set_index(self, index: int):
+        # for dtype in (DataType.GROUND_TRUTH, DataType.PREDICTED):
+        #     self.scene.set_markers_visible(index, dtype, False)
+        # for table in self.tabwidget.values():
+        #     table.setSelection(QtCore.QRect(0, 0, 0, 0),
+        #                        QtCore.QItemSelectionModel.Clear)
+        self._set_image(index)
+        self._set_table_models(index)
+        self.currentIndex = index
+
+    def _set_image(self, index: int):
+        source = self.datasources[DataType.IMAGE][0]
+        image = source.request(index)
+        pixmap = self.scene.array2pixmap(image, rescale=True)
+        self.scene.pixmap = pixmap
+
+    def _set_table_models(self, index: int):
+        views = self.tabwidget.values()
+        sources = self.datasources[DataType.DATA]
+        columns = self.columns[DataType.DATA]
+
+        for view, source, col in zip(views, sources, columns):
+            dsets = [s.request(index) for s in source]
+            model = HDF5TableModel(dsets, col, show_row_index=True)
+            view.setModel(model)
 
     def getCurentIndex(self):
         return self._current_index
@@ -68,48 +118,7 @@ class Controller(QtCore.QObject):
     currentIndex = QtCore.Property(
         int, 'getCurentIndex', 'setCurrentIndex', 'resetCurrentIndex')
 
-    @QtCore.Slot(int)
-    def _tab_changed(self, i):
-        index = self.currentIndex
-        for dtype in self.tabwidget.keys():
-            self.scene.set_markers_visible(index, dtype, False)
+    def _get_dtypes(self):
+        return list(self.tabwidget.keys())
 
-        dtype = self.dtypes[i]
-        table = self.tabwidget[dtype]
-        ind = [ind.row() for ind in table.selectedIndexes()]
-        self.scene.set_markers_visible(index, dtype, True, ind)
-
-    @QtCore.Slot(int)
-    def set_index(self, index: int):
-        for dtype in (DataType.GROUND_TRUTH, DataType.PREDICTED):
-            self.scene.set_markers_visible(index, dtype, False)
-        self._set_image(index)
-        for table in self.tableviews.values():
-            table.setSelection(QtCore.QRect(0, 0, 0, 0),
-                               QtCore.QItemSelectionModel.Clear)
-        self._set_table_models(index)
-        self.currentIndex = index
-
-    def _set_image(self, index: int):
-        source = self.datasources[DataType.IMAGE]
-        image = source.request(index)
-        pixmap = self.scene.array2pixmap(image, rescale=True)
-        self.scene.pixmap = pixmap
-
-    def _set_table_models(self, index: int):
-        views = self.tableviews
-        sources = self.datasources
-
-        for view, source, col in zip(views, sources, self._columns):
-            dsets = [s.request(index) for s in source]
-            model = HDF5TableModel(dsets, col, show_row_index=True)
-            view.setModel(model)
-
-    @QtCore.Slot('QItemSelection', 'QItemSelection', object)
-    def toggle_visible_graphics_items(self, visible, invisible, dtype):
-        visible = [ind.row() for ind in visible.indexes()]
-        invisible = [ind.row() for ind in invisible.indexes()]
-
-        index = self.currentIndex
-        self.scene.set_markers_visible(index, dtype, True, visible)
-        self.scene.set_markers_visible(index, dtype, False, invisible)
+    dtypes = QtCore.Property(list, '_get_dtypes')

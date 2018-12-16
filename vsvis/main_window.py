@@ -36,49 +36,6 @@ from .models.table import HDF5TableModel
 from .enums import DataType
 
 
-class VTabWidget(QtWidgets.QTabWidget):
-    def __init__(self, titles: EnumDict, parent=None):
-        super().__init__(parent)
-        self._widgets = EnumDict([(k, None) for k in titles])
-        self.tables = EnumDict([(k, None) for k in titles])
-        for k, v in titles:
-            self._add_tab(k, v)
-
-    def _add_tab(self, dtype: DataType, name: str):
-        widget = QtWidgets.QWidget()
-        layout = QtWidgets.QVBoxLayout(widget)
-        layout.setContentsMargins(0, 0, 0, 0)
-        table = QtWidgets.QTableView(widget)
-        table.setSizePolicy(QtWidgets.QSizePolicy.Preferred,
-                            QtWidgets.QSizePolicy.Expanding)
-        table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
-        table.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
-        table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
-        table.horizontalHeader().setCascadingSectionResizes(True)
-        layout.addWidget(table)
-        self.addTab(self.ground_truth_tab, name)
-
-        self.tables[dtype] = table
-        self._widgets[dtype] = widget
-
-    def __getitem__(self, key):
-        return self.tables[key]
-
-    def __len__(self):
-        return len(self.tables)
-
-    def __iter__(self):
-        return iter(self.tables)
-
-    def keys(self):
-        return self.tables.keys()
-
-    def values(self):
-        return self.tables.values()
-
-    def items(self):
-        return self.tables.items()
-
 tr = QtCore.QObject.tr
 MainWindowClass, MainWindowBaseClass = uic.loadUiType(
     join(UI_DIR, 'main_window2.ui'))
@@ -116,7 +73,6 @@ class VMainWindow(MainWindowClass, MainWindowBaseClass):
         super(MainWindowBaseClass, self).__init__()
         self.setupUi(self)
         self._setup_tables(tabwidget)
-
 
         self.filenames = EnumDict([
             (DataType.GROUND_TRUTH, None),
@@ -202,18 +158,18 @@ class VMainWindow(MainWindowClass, MainWindowBaseClass):
             self, tr(self, 'Open File'), '', extstring, None,
             QtWidgets.QFileDialog.DontUseNativeDialog)
 
-        return filename
+        return filename[0]
 
-    def _hdf5_file_open_dialog(self):
-        key = 'HDF5 Files'
-        extensions = {key: self.extensions[key]}
-        return self._file_open_dialog(**extensions)
+    # def _hdf5_file_open_dialog(self):
+    #     key = 'HDF5 Files'
+    #     extensions = {key: self.extensions[key]}
+    #     return self._file_open_dialog(**extensions)
 
-    def _open_hdf5_file_inspection_widget(
-            self, filename: str, *list_titles: str):
-        names = OrderedDict(
-            [(title, ['name', 'directory']) for title in list_titles])
-        return make_dialog(filename, names)
+    # def _open_hdf5_file_inspection_widget(
+    #         self, filename: str, *list_titles: str):
+    #     names = OrderedDict(
+    #         [(title, ['name', 'directory']) for title in list_titles])
+    #     return make_dialog(filename, names)
 
     def load_data(self, filename, data, flag):
         pass
@@ -234,12 +190,11 @@ class VMainWindow(MainWindowClass, MainWindowBaseClass):
             (DataType.HD5, 'HDF5 Files'),
             (DataType.TIFF_IMAGE, 'Tiff Files')])
         extensions = dict(zip(enum_to_name[flag], self.extensions[flag]))
-        filename = self._file_open_dialog(**extensions)[0]
-        file_ext = splitext(filename).split(extsep)[1]
-        if file_ext in self.extensions[DataType.TIFF_IMAGE]:
+        filename = self._file_open_dialog(**extensions)
+        if flag & DataType.TIFF_IMAGE:
             raise NotImplementedError('Loading Tiff images is not yet '
                                       'implemented. Please use HDF5 data.')
-        else:
+        elif flag & DataType.HD5:
             self._open_inspection_widget(filename, flag)
         # QtWidgets.QFileDialog.getOpenFileName(
         #     self, tr(self, 'Open File'), '',
