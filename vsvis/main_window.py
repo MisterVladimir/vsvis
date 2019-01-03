@@ -153,8 +153,8 @@ class VMainWindow(VMainWindowBaseClass, Ui_VMainWindowClass):
         ground_truth_titles = OrderedDict(
             [('Ground Truth Coordinates', list_widget_columns)])
         predicted_titles = OrderedDict(
-            [('Probabilities', list_widget_columns),
-             ('Predicted Coordinates', list_widget_columns)])
+            [('Predicted Coordinates', list_widget_columns),
+             ('Probabilities', list_widget_columns)])
         image_titles = OrderedDict(
             [('Images', list_widget_columns)])
 

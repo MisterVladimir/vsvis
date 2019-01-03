@@ -238,9 +238,11 @@ class HDF5DataSource(object):
     def cleanup(self):
         self.h5file.close()
 
-    def request(self, index: int, axis: int = 0):
+    def request(self, index: int, axis: int = -1):
         name, sl = self._request(index)
         if isiterable(name):
-            return np.concatenate([self.h5file[n] for n in name], axis)
+            arr = [self.h5file[n].value for n in name]
+            arr = [a[:, None] if a.ndim == 1 else a for a in arr]
+            return np.concatenate(arr, axis)
         else:
             return self.h5file[name][sl]

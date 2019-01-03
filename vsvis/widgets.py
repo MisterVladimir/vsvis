@@ -331,9 +331,9 @@ class VMarkerOptionsWidget(VMarkerOptionsBaseClass, Ui_VMarkerOptionsClass):
     def _emit_shape_changed(self, shape):
         self.shape_changed.emit(self.current_shape)
 
-    @Slot(float)
+    @Slot(int)
     def _emit_size_changed(self, size):
-        self.size_changed.emit(size / 2.)
+        self.size_changed.emit(size / 4.)
 
     @Slot()
     def _select_color(self):
@@ -369,9 +369,9 @@ class VMarkerOptionsWidget(VMarkerOptionsBaseClass, Ui_VMarkerOptionsClass):
     def current_shape(self):
         return self.combobox.currentData()
 
-    @Property(int)
+    @Property(float)
     def current_size(self):
-        return self.spinbox.value()
+        return self.spinbox.value() / 4.
 
     @Property(int)
     def check_state(self) -> int:

@@ -154,7 +154,7 @@ class TunableMarker(QGraphicsItem):
         self.info = kwargs
 
         self._pen = QPen()
-        self._pen.setWidth(1)
+        self._pen.setWidthF(0.25)
         self._brush = QBrush()
 
     def _make_rect(self, length):
@@ -306,12 +306,7 @@ class MarkerFactory(QObject):
         key : int
             Index that this marker will have in the parent VGraphicsGroup.
         """
-        shape = self._shape
-        print('shape: {}'.format(repr(shape)))
-        size = self._size
-        print('size: {}'.format(repr(size)))
-
-        marker = TunableMarker(shape, size, key=None, **kwargs)
+        marker = TunableMarker(self._shape, self._size, key=None, **kwargs)
         marker.set_marker_color(self.get_marker_color())
         marker.set_marker_fill(self.get_marker_fill())
         # marker = self._marker_class(self._size, **kwargs)
