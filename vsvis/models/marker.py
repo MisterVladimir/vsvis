@@ -157,16 +157,22 @@ class TunableMarker(QGraphicsItem):
         self._pen.setWidth(1)
         self._brush = QBrush()
 
+    def _make_rect(self, length):
+        # make a rectangle of width and height equal to 'length' and centered
+        # about (0, 0)
+        return QRectF(-length / 2, -length / 2, length, length)
+
     def boundingRect(self):
-        return QRectF(0, 0, self._size, self._size)
+        return self._make_rect(self._size + 4)
 
     def _paint_ellipse(self, painter):
-        painter.drawEllipse(self.boundingRect())
+        rect = self._make_rect(self._size)
+        painter.drawEllipse(rect)
 
     def _paint_diamond(self, painter):
         size = self._size
-        X = [size / 2, size - 0.5, size / 2, 0.5, size / 2]
-        Y = [size - 0.5, size / 2, 0.5, size / 2, size - 0.5]
+        X = [0, size / 2, 0, -size / 2, 0]
+        Y = [size / 2, 0, -size / 2, 0, size / 2]
         points = [QPointF(x, y) for x, y in zip(X, Y)]
         polygon = QPolygonF(points)
         painter.drawPolygon(polygon, len(points))
@@ -280,14 +286,6 @@ class MarkerFactory(QObject):
 
     def set_marker_shape(self, shape: Shape):
         self._shape = shape
-
-        # mclass = self._shape_to_class[sh]
-        # if not len(mclass) == 1:
-        #     shapes = {Shape.DIAMOND, Shape.CIRCLE}
-        #     raise ValueError('shape must be one of {}.'.format(
-        #         ' or '.join((str(s) for s in shapes))))
-        # self._shape = sh
-        # self._marker_class = mclass[0]
 
     def get_marker_size(self):
         return self._size

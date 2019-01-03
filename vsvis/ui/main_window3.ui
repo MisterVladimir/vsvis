@@ -365,6 +365,13 @@
           </widget>
          </item>
          <item>
+          <widget class="Line" name="line">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="VScrollBar" name="graphics_view_scrollbar">
            <property name="enabled">
             <bool>false</bool>

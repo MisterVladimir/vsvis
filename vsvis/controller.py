@@ -109,7 +109,7 @@ class Controller(QObject):
         # parametrs (e.g. color, shape, etc.) are set
         self.groupbox.check_state_changed[int, object].connect(
             self.toggle_by_dtype)
-        self.groupbox.marker_size_changed[int, object].connect(
+        self.groupbox.marker_size_changed[float, object].connect(
             self._set_marker_size)
         self.groupbox.marker_color_changed['QColor', object].connect(
             self._set_marker_color)
@@ -192,16 +192,15 @@ class Controller(QObject):
         self._markers_to_show[dtype] = set()
 
     def _set_marker_property(self, setter_name, value, dtype):
-        for groups in self.scene.groups[dtype]:
-            for g in groups:
-                setter = getattr(g, setter_name)
+        for group in self.scene.groups[dtype]:
+            for marker in group:
+                setter = getattr(marker, setter_name)
                 setter(value)
 
     _set_marker_color = partialmethod(_set_marker_property, 'set_marker_color')
     _set_marker_fill = partialmethod(_set_marker_property, 'set_marker_fill')
-    # VGraphicsGroup.set_marker_shape not implemented
-    _set_marker_shape = partialmethod(lambda: None)
-    # _set_marker_shape = partialmethod(_set_marker_property, 'set_marker_shape')
+    # _set_marker_shape = partialmethod(lambda: None)
+    _set_marker_shape = partialmethod(_set_marker_property, 'set_marker_shape')
     _set_marker_size = partialmethod(_set_marker_property, 'set_marker_size')
 
     def warn(self, message: str) -> bool:

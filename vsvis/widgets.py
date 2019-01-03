@@ -304,7 +304,7 @@ class VMarkerOptionsWidget(VMarkerOptionsBaseClass, Ui_VMarkerOptionsClass):
     color_changed = Signal(QColor)
     fill_changed = Signal(bool)
     shape_changed = Signal(object)
-    size_changed = Signal(int)
+    size_changed = Signal(float)
 
     def __init__(self, checkbox_text: str, dtype: DataType,
                  color: Union[QColor, int] = Qt.white,
@@ -320,10 +320,20 @@ class VMarkerOptionsWidget(VMarkerOptionsBaseClass, Ui_VMarkerOptionsClass):
     def _signals_setup(self):
         self.select_color_button.clicked.connect(self._select_color)
         self.checkbox.stateChanged[int].connect(self._emit_check_state_changed)
+        self.spinbox.valueChanged[int].connect(self._emit_size_changed)
+        self.combobox.currentIndexChanged[int].connect(self._emit_shape_changed)
 
     @Slot(int)
     def _emit_check_state_changed(self, state):
         self.check_state_changed.emit(state)
+
+    @Slot(int)
+    def _emit_shape_changed(self, shape):
+        self.shape_changed.emit(self.current_shape)
+
+    @Slot(float)
+    def _emit_size_changed(self, size):
+        self.size_changed.emit(size / 2.)
 
     @Slot()
     def _select_color(self):
@@ -379,9 +389,9 @@ class VMarkerOptionsGroupBox(QGroupBox):
     # second parameter is a DataType
     check_state_changed = Signal(int, object)
     marker_color_changed = Signal(QColor, object)
-    marker_fill_changed = Signal(bool, object)    
+    marker_fill_changed = Signal(bool, object)
     marker_shape_changed = Signal(object, object)
-    marker_size_changed = Signal(int, object)
+    marker_size_changed = Signal(float, object)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -406,7 +416,7 @@ class VMarkerOptionsGroupBox(QGroupBox):
             lambda i: self.check_state_changed.emit(i, dtype))
         widget.color_changed['QColor'].connect(
             lambda c: self.marker_color_changed.emit(c, dtype))
-        widget.size_changed[int].connect(
+        widget.size_changed[float].connect(
             lambda sz: self.marker_size_changed.emit(sz, dtype))
         widget.shape_changed[object].connect(
             lambda sh: self.marker_shape_changed.emit(sh, dtype))
