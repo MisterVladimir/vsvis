@@ -145,18 +145,16 @@ class EllipseMarker(QGraphicsEllipseItem, Marker):
 
 
 class TunableMarker(QGraphicsItem):
-    _shape_to_paint_method = {Shape.CIRCLE: _paint_ellipse,
-                              Shape.DIAMOND: _paint_diamond}
-
-    def __init___(self, shape: Shape, size: int,
-                  key: Optional[int] = None, **kwargs):
-        super().__init__(self, parent=None)
+    def __init__(self, shape: Shape, size: int,
+                 key: Optional[int] = None, **kwargs):
+        super().__init__()
         self._shape = shape
         self._size = size
         self.key = key
         self.info = kwargs
 
         self._pen = QPen()
+        self._pen.setWidth(1)
         self._brush = QBrush()
 
     def boundingRect(self):
@@ -167,10 +165,11 @@ class TunableMarker(QGraphicsItem):
 
     def _paint_diamond(self, painter):
         size = self._size
-        X = [size / 2, size, size / 2, 0]
-        Y = [size, size / 2, 0, size / 2]
+        X = [size / 2, size - 0.5, size / 2, 0.5, size / 2]
+        Y = [size - 0.5, size / 2, 0.5, size / 2, size - 0.5]
         points = [QPointF(x, y) for x, y in zip(X, Y)]
-        painter.drawPolygon(points, len(points))
+        polygon = QPolygonF(points)
+        painter.drawPolygon(polygon, len(points))
 
     def paint(self, painter: QPainter, option: QStyleOptionGraphicsItem,
               widget: QWidget):
@@ -178,8 +177,16 @@ class TunableMarker(QGraphicsItem):
         painter.setPen(self._pen)
         painter.setBrush(self._brush)
 
-        drawing_method = self._shape_to_paint_method[self._shape]
+        shape_to_paint_method = {Shape.CIRCLE: self._paint_ellipse,
+                                 Shape.DIAMOND: self._paint_diamond}
+        drawing_method = shape_to_paint_method[self._shape]
         drawing_method(painter)
+
+    def get_marker_color(self):
+        """
+        Marker color.
+        """
+        return self._pen.color()
 
     def set_marker_color(self, color: Union[QColor, int]):
         color = QColor(color)
@@ -187,11 +194,11 @@ class TunableMarker(QGraphicsItem):
         self._brush.setColor(color)
         self.update()
 
-    def get_marker_color(self):
+    def get_marker_fill(self) -> bool:
         """
-        Marker color.
+        Whether this marker is filled in or merely an outline.
         """
-        return self._pen.color()
+        return bool(self._brush.style())
 
     def set_marker_fill(self, f: bool):
         if f:
@@ -201,25 +208,19 @@ class TunableMarker(QGraphicsItem):
         self._brush.setStyle(f)
         self.update()
 
-    def get_marker_fill(self) -> bool:
-        """
-        Whether this marker is filled in or merely an outline.
-        """
-        return bool(self._brush.style())
+    def get_marker_shape(self):
+        return self._shape
 
     def set_marker_shape(self, shape: Shape):
         self._shape = shape
         self.update()
 
-    def get_marker_shape(self):
-        return self._shape
+    def get_marker_size(self):
+        return self._size
 
     def set_marker_size(self, sz: int):
         self._size = sz
         self.update()
-
-    def get_marker_size(self):
-        return self._size
 
 
 class MarkerFactory(QObject):
@@ -248,7 +249,7 @@ class MarkerFactory(QObject):
         self._brush = QBrush()
         self._pen = QPen()
 
-        self._set_marker_shape(shape)
+        self.set_marker_shape(shape)
         self.set_marker_size(size)
         self.set_marker_color(color)
         self.set_marker_fill(filled)
@@ -277,14 +278,16 @@ class MarkerFactory(QObject):
     def get_marker_shape(self) -> Shape:
         return self._shape
 
-    def _set_marker_shape(self, sh: Shape):
-        mclass = self._shape_to_class[sh]
-        if not len(mclass) == 1:
-            shapes = {Shape.DIAMOND, Shape.CIRCLE}
-            raise ValueError('shape must be one of {}.'.format(
-                ' or '.join((str(s) for s in shapes))))
-        self._shape = sh
-        self._marker_class = mclass[0]
+    def set_marker_shape(self, shape: Shape):
+        self._shape = shape
+
+        # mclass = self._shape_to_class[sh]
+        # if not len(mclass) == 1:
+        #     shapes = {Shape.DIAMOND, Shape.CIRCLE}
+        #     raise ValueError('shape must be one of {}.'.format(
+        #         ' or '.join((str(s) for s in shapes))))
+        # self._shape = sh
+        # self._marker_class = mclass[0]
 
     def get_marker_size(self):
         return self._size
@@ -305,8 +308,16 @@ class MarkerFactory(QObject):
         key : int
             Index that this marker will have in the parent VGraphicsGroup.
         """
-        marker = self._marker_class(self._size, **kwargs)
-        marker.setBrush(self._brush)
-        marker.setPen(self._pen)
+        shape = self._shape
+        print('shape: {}'.format(repr(shape)))
+        size = self._size
+        print('size: {}'.format(repr(size)))
+
+        marker = TunableMarker(shape, size, key=None, **kwargs)
+        marker.set_marker_color(self.get_marker_color())
+        marker.set_marker_fill(self.get_marker_fill())
+        # marker = self._marker_class(self._size, **kwargs)
+        # marker.setBrush(self._brush)
+        # marker.setPen(self._pen)
         marker.setPos(x, y)
         return marker

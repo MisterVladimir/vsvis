@@ -253,13 +253,7 @@ class VGraphicsScene(QGraphicsScene):
     """
     Note that is the responsibility of a Controller-type object to coordinate
     the display of markers appropriate to the image.
-
-    factories: EnumDict
-        Keys are a DataType enum describing whether we're displaying
-        ground truth or predicted markers/data. Values are a MarkerFactory
-        that produce's that data's 
     """
-    buffer_size = 50
     default_image = np.random.randint(0, 256, (512, 512), dtype=np.uint8)
     pixmap_changed = Signal(int)
     markers_changed = Signal(int, object)
