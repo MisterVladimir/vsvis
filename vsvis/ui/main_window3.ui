@@ -33,7 +33,7 @@
     <item row="0" column="1">
      <widget class="QWidget" name="control_panel_widget" native="true">
       <property name="sizePolicy">
-       <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
         <horstretch>0</horstretch>
         <verstretch>0</verstretch>
        </sizepolicy>
@@ -55,7 +55,10 @@
         <number>4</number>
        </property>
        <item>
-        <widget class="QGroupBox" name="marker_options_groupbox">
+        <widget class="VMarkerOptionsGroupBox" name="marker_options_groupbox">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
            <horstretch>0</horstretch>
@@ -68,70 +71,24 @@
          <property name="flat">
           <bool>false</bool>
          </property>
-         <layout class="QGridLayout" name="gridLayout">
-          <item row="0" column="0">
-           <widget class="QCheckBox" name="ground_truth_checkbox">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="toolTip">
-             <string>Show ground truth data</string>
-            </property>
-            <property name="text">
-             <string>Ground Truth</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QComboBox" name="predicted_combobox">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="toolTip">
-             <string>Select predicted marker</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QCheckBox" name="predicted_checkbox">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="toolTip">
-             <string>Show predicted data</string>
-            </property>
-            <property name="text">
-             <string>Predicted</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QComboBox" name="ground_truth_combobox">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="toolTip">
-             <string>Select ground truth marker</string>
-            </property>
-           </widget>
-          </item>
+         <layout class="QVBoxLayout" name="data_display_layout">
+          <property name="leftMargin">
+           <number>9</number>
+          </property>
+          <property name="topMargin">
+           <number>9</number>
+          </property>
+          <property name="rightMargin">
+           <number>9</number>
+          </property>
+          <property name="bottomMargin">
+           <number>9</number>
+          </property>
          </layout>
         </widget>
        </item>
        <item>
-        <widget class="QWidget" name="tables_parent_widget" native="true">
+        <widget class="VTabWidget" name="tables_tab_widget" native="true">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
            <horstretch>0</horstretch>
@@ -158,7 +115,7 @@
         </widget>
        </item>
        <item>
-        <widget class="VProbabilitySlider" name="probability_slider">
+        <widget class="QSlider" name="probability_slider">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
            <horstretch>0</horstretch>
@@ -250,12 +207,15 @@
              <height>34</height>
             </size>
            </property>
+           <property name="toolTip">
+            <string>fit image to window</string>
+           </property>
            <property name="text">
             <string/>
            </property>
            <property name="icon">
             <iconset resource="../resources.qrc">
-             <normaloff>:/icons/resize_medium</normaloff>:/icons/resize_medium</iconset>
+             <normaloff>:/resize</normaloff>:/resize</iconset>
            </property>
            <property name="iconSize">
             <size>
@@ -297,12 +257,15 @@
              <height>34</height>
             </size>
            </property>
+           <property name="toolTip">
+            <string>zoom out</string>
+           </property>
            <property name="text">
             <string/>
            </property>
            <property name="icon">
             <iconset resource="../resources.qrc">
-             <normaloff>:/icons/zoom_in_small</normaloff>:/icons/zoom_in_small</iconset>
+             <normaloff>:/zoom_out</normaloff>:/zoom_out</iconset>
            </property>
            <property name="iconSize">
             <size>
@@ -335,12 +298,15 @@
              <height>34</height>
             </size>
            </property>
+           <property name="toolTip">
+            <string>zoom in</string>
+           </property>
            <property name="text">
             <string/>
            </property>
            <property name="icon">
             <iconset resource="../resources.qrc">
-             <normaloff>:/icons/zoom_out_small</normaloff>:/icons/zoom_out_small</iconset>
+             <normaloff>:/zoom_in</normaloff>:/zoom_in</iconset>
            </property>
            <property name="iconSize">
             <size>
@@ -370,6 +336,9 @@
        </item>
        <item>
         <layout class="QHBoxLayout" name="view_layout">
+         <property name="spacing">
+          <number>0</number>
+         </property>
          <item>
           <widget class="VGraphicsView" name="graphics_view">
            <property name="sizePolicy">
@@ -396,7 +365,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QScrollBar" name="graphics_view_scrollbar">
+          <widget class="VScrollBar" name="graphics_view_scrollbar">
            <property name="enabled">
             <bool>false</bool>
            </property>
@@ -512,8 +481,20 @@
    </slots>
   </customwidget>
   <customwidget>
-   <class>VProbabilitySlider</class>
-   <extends>QSlider</extends>
+   <class>VMarkerOptionsGroupBox</class>
+   <extends>QGroupBox</extends>
+   <header>vsvis.widgets</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>VTabWidget</class>
+   <extends>QWidget</extends>
+   <header>vsvis.widgets</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>VScrollBar</class>
+   <extends>QScrollBar</extends>
    <header>vsvis.widgets</header>
   </customwidget>
  </customwidgets>

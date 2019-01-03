@@ -22,9 +22,12 @@ import numpy as np
 import re
 import sys
 import os
-from qtpy import QtCore, QtWidgets, uic
 import pandas as pd
-from typing import Sequence, Optional, Dict
+from os.path import splitext, basename
+from qtpy.QtWidgets import QWidget, QDialog
+from qtpy.QtCore import Slot
+from qtpy import uic
+from typing import Callable, Dict, Optional, NamedTuple, Sequence, Union
 from anytree import Node
 from collections import OrderedDict, namedtuple
 from vladutils.decorators import methdispatch as method_dispatch
@@ -32,24 +35,21 @@ from vladutils.decorators import methdispatch as method_dispatch
 from .models.tree import DraggableTreeModel
 from .models.table import DroppableListModel, DataFrameModel
 from .utils import load_node_from_hdf5
-from . import UI_DIR, TEST_DIR
-from .enums import DataType
+from .config import UI_DIR, TEST_DIR, EXTENSIONS
+from .config import DataType
 
 
-DialogClass, DialogBaseClass = uic.loadUiType(
-    os.path.join(UI_DIR, 'file_inspection_dialog.ui'))
-
-GroupBoxClass, GroupBoxBaseClass = uic.loadUiType(
+Ui_GroupBoxClass, GroupBoxBaseClass = uic.loadUiType(
     os.path.join(UI_DIR, 'listbox.ui'))
 
 
-class LabeledListWidget(GroupBoxClass, GroupBoxBaseClass):
+class LabeledListWidget(GroupBoxBaseClass, Ui_GroupBoxClass):
     """
-    A ListWidget inside a GroupBox, with buttons on the bottom to modify
+    A ListWidget inside a GroupBox, with buttons on the bottom to edit
     the contents of the list.
     """
-    def __init__(self, title: str, parent: Optional[QtWidgets.QWidget] = None):
-        super(GroupBoxBaseClass, self).__init__(parent)
+    def __init__(self, title: str, parent: Optional[QWidget] = None):
+        super(LabeledListWidget, self).__init__(parent)
         self.setupUi(self)
         self.groupbox.setTitle(title)
 
@@ -96,61 +96,108 @@ class LabeledListWidget(GroupBoxClass, GroupBoxBaseClass):
         return dataframe[column]
 
     @get_data.register(list)
-    def _get_data(self, column):
+    def _get_data(self, columns):
         dataframe = self.list_view.model().dataFrame()
         # a hack until I figure out a way to dispatch by the type
         # contained within the list
-        column = [dataframe.columns.get_loc(c) if isinstance(c, str) else c
-                  for c in column]
-        return dataframe.iloc[:, list(column)]
-
-FileLoadingParameter = namedtuple(
-    'FileLoadingParameter', ['attr', 'column', 'function'], defaults=[None])
+        columns = [dataframe.columns.get_loc(c) if isinstance(c, str) else c
+                   for c in columns]
+        return dataframe.iloc[:, list(columns)]
 
 
-class FileInspectionDialog(DialogClass, DialogBaseClass):
-    def __init__(self, ID, parent: QtWidgets.QWidget = None):
-        # XXX: might not need ID: DataType afterall
-        super(DialogBaseClass, self).__init__(parent)
+class FileLoadingParameter(NamedTuple):
+    """
+    attr : str
+        Name of the h5py.Group or h5py.Dataset attribute
+
+    column : str
+        Name of the column in self.data_preview_table_view in which
+        this attribute's value will be displayed while the item is
+        selected.
+
+    function : Optional[Callable]
+        Function that takes the h5py.Group or h5py.Dataset's 'attr' attribute
+        as a single argument.
+    """
+    attr: str
+    column: str
+    function: Optional[Callable] = None
+
+Ui_DialogClass, DialogBaseClass = uic.loadUiType(
+    os.path.join(UI_DIR, 'file_inspection_dialog.ui'))
+
+
+class VFileInspectionDialog(DialogBaseClass, Ui_DialogClass):
+    """
+    dtype : DataType
+        DataType of the data being loaded.
+
+    parent : Optional[QWidget]
+    """
+    def __init__(self, dtype: DataType, parent: Optional[QWidget] = None):
+        super(VFileInspectionDialog, self).__init__(parent)
         self.setupUi(self)
-        self.ID = ID
+        self.dtype = dtype
         self.list_widgets = dict()
         self.filename = None
         self.columns = []
         self.attributes = []
-        self._model_setup()
+    #     self._model_setup()
 
-    def _model_setup(self):
-        # setup empty model for the tree view
-        root = Node('root')
-        model = DraggableTreeModel(root, [])
-        self.file_structure_tree_view.setModel(model)
+    # def _model_setup(self):
+    #     # setup empty model for the tree view
+    #     root = Node('root')
+    #     model = DraggableTreeModel(root, [])
+    #     self.file_structure_tree_view.setModel(model)
 
-    def load_file(self, filename: str, *parameters: FileLoadingParameter):
+    def load(self, filename: str, *parameters: FileLoadingParameter):
+        """
+        filename : str
+            Name of HDF5 file to be inspected.
+
+        parameters : NamedTuple
+        """
+        if splitext(filename)[1] not in EXTENSIONS[DataType.HD5][0]:
+            raise TypeError("{} is not an HDF5 file.".format(basename(filename)))
         self.filename = filename
         self.attributes, self.columns, functions = zip(*parameters)
 
-        args = [attr for attr, col, func in zip(self.attributes, self.columns, functions) if func is None]
-        kwargs = {attr: func for attr, col, func in zip(self.attributes, self.columns, functions)
-                  if func is not None}
-        root = load_node_from_hdf5(filename, *args, **kwargs)
+        # same as
+        # args = [attr for attr, _, func in zip(
+        #   self.attributes, self.columns, functions) if func is None]
+        functions_iter = iter(functions)
+        args = tuple(filter(lambda x: not next(functions_iter),
+                            self.attributes))
 
-        tree_model = self.file_structure_tree_view.model()
-        tree_model.layoutAboutToBeChanged.emit()
-        tree_model.root = root
-        tree_model.attributes = self.attributes
-        tree_model.layoutChanged.emit()
+        # same as
+        # kwargs = {attr: func for attr, _, func
+        #           in zip(self.attributes, self.columns, functions)
+        #           if func is not None}
+        functions_iter = iter(functions)
+        kwargs = dict(filter(lambda x: next(functions_iter),
+                             zip(self.attributes, functions)))
+
+        root = load_node_from_hdf5(filename, *args, **kwargs)
+        self.file_structure_tree_view.setModel(
+            DraggableTreeModel(root, self.attributes))
+        # tree_model = self.file_structure_tree_view.model()
+        # tree_model.layoutAboutToBeChanged.emit()
+        # tree_model.root = root
+        # tree_model.encodable = self.attributes
+        # tree_model.layoutChanged.emit()
 
         dataframe = pd.DataFrame(columns=self.columns)
         table_model = DataFrameModel(dataframe)
         self.data_preview_table_view.setModel(table_model)
 
+        # after new data loaded, disconnect previous selection models
         selection_model = self.file_structure_tree_view.selectionModel()
         try:
-            selection_model.selectionChanged.disconnect(self.file_selection_changed)
+            selection_model.selectionChanged.disconnect(
+                self.file_selection_changed)
         except TypeError:
             pass
-        selection_model.selectionChanged.connect(lambda: self.file_selection_changed())
+        selection_model.selectionChanged.connect(self.file_selection_changed)
 
     def add_list_widget(
             self, title: str, columns: Sequence[str]) -> bool:
@@ -171,17 +218,19 @@ class FileInspectionDialog(DialogClass, DialogBaseClass):
 
         return True
 
+    @Slot()
     def file_selection_changed(self):
         """
         Every time the TreeView's selection is changed, update the TableModel
-        to reflect the current selection. This isn't the most computatoinally
-        efficient implementation -- it would be better to look for differnces,
-        and update only those -- but this is much simpler.
+        to reflect the current selection. What follows isn't the most
+        computationally efficient implementation -- it would be better to look
+        for differnces, and update only those -- but this is much simpler.
         """
         table_model = self.data_preview_table_view.model()
         tree_model = self.file_structure_tree_view.model()
         indices = self.file_structure_tree_view.selectedIndexes()
-        as_dict = tree_model.get_nodes_as_dict(indices, dict(zip(self.attributes, self.columns)))
+        as_dict = tree_model.get_nodes_as_dict(
+            indices, dict(zip(self.attributes, self.columns)))
         dataframe = pd.DataFrame.from_dict(as_dict)
 
         dif = len(indices) - table_model.rowCount()
@@ -194,9 +243,19 @@ class FileInspectionDialog(DialogClass, DialogBaseClass):
         table_model.layoutChanged.emit()
         return True
 
+    def get_data(self, column: Optional[Union[str, Sequence[str]]] = None,
+                 titles: Optional[Union[str, Sequence[str]]] = None):
+        if titles is None:
+            widgets = self.list_widgets.values()
+        else:
+            widgets = (self.list_widgets[t] for t in titles)
 
-def _make_dialog_base(filename, ID):
-    dialog = FileInspectionDialog(ID)
+        df = pd.concat([w.get_data(column) for w in widgets], axis=1)
+        return df.values
+
+
+def _make_dialog_base(filename, dtype):
+    dialog = VFileInspectionDialog(dtype)
 
     def get_name(dset):
         # pads numbers with zeros
@@ -224,12 +283,12 @@ def _make_dialog_base(filename, ID):
             column="Type",
             function=lambda dset: str(getattr(dset, 'dtype')))]
 
-    dialog.load_file(filename, *parameters)
+    dialog.load(filename, *parameters)
     return dialog
 
 
-def make_dialog(filename: str, names: Dict, ID: DataType) -> QtWidgets.QDialog:
-    dialog = _make_dialog_base(filename, ID)
+def make_dialog(filename: str, names: Dict, dtype: DataType) -> QDialog:
+    dialog = _make_dialog_base(filename, dtype)
     for k, v in names.items():
         dialog.add_list_widget(k, v)
     return dialog

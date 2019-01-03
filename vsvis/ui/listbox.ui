@@ -46,7 +46,7 @@
          <bool>true</bool>
         </property>
         <property name="toolTip">
-         <string>Drop image data here</string>
+         <string>Drop Datasets here</string>
         </property>
         <property name="editTriggers">
          <set>QAbstractItemView::NoEditTriggers</set>

@@ -20,29 +20,31 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import pickle
 import numpy as np
-from typing import Union, Sequence
-from qtpy import QtCore
+from collections import OrderedDict
+from typing import Union, Sequence, Optional, Dict, Iterator
+from qtpy.QtCore import QObject, QMimeData, QAbstractItemModel, QModelIndex, Qt
+# from qtpy.QtWidgets import QWidget
 from anytree import Node
 from ordered_set import OrderedSet
 
 
-class NodeTreeModel(QtCore.QAbstractItemModel):
-    def __init__(self, root: Node, parent: QtCore.QObject = None):
+class NodeTreeModel(QAbstractItemModel):
+    def __init__(self, root: Node, parent: QObject = None):
         super().__init__(parent)
         self.root = root
 
-    def get_node(self, index: QtCore.QModelIndex):
+    def get_node(self, index: QModelIndex):
         if index.isValid():
             # print('internal pointer: {}'.format(index.internalPointer()))
             return index.internalPointer()
         else:
             return self.root
 
-    def rowCount(self, parent: QtCore.QModelIndex):
+    def rowCount(self, parent: QModelIndex):
         """
         Parameters
         ------------
-        parent : QtCore.QModelIndex
+        parent : QModelIndex
             Index of parent item.
 
         Returns
@@ -63,25 +65,25 @@ class NodeTreeModel(QtCore.QAbstractItemModel):
         node = self.get_node(index)
         parent_node = node.parent
         if parent_node == self.root:
-            return QtCore.QModelIndex()
+            return QModelIndex()
         else:
             return self.createIndex(parent_node.row, 0, parent_node)
 
-    def data(self, index: QtCore.QModelIndex, role: int) -> Union[str, None]:
+    def data(self, index: QModelIndex, role: int) -> Union[str, None]:
         if not index.isValid():
             return None
         node = index.internalPointer()
 
-        if role == QtCore.Qt.DisplayRole:
+        if role == Qt.DisplayRole:
             return node.name
 
-    def flags(self, index: QtCore.QModelIndex):
+    def flags(self, index: QModelIndex):
         if index.isValid():
-            return QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled
+            return Qt.ItemIsSelectable | Qt.ItemIsEnabled
         else:
-            return QtCore.Qt.NoItemFlags
+            return Qt.NoItemFlags
 
-    def index(self, row: int, column: int, parent: QtCore.QModelIndex) -> QtCore.QModelIndex:
+    def index(self, row: int, column: int, parent: QModelIndex) -> QModelIndex:
         """
         Returns an index at the given row, column of the parent.
 
@@ -89,7 +91,7 @@ class NodeTreeModel(QtCore.QAbstractItemModel):
         ------------
         row : int
         column : int
-        parent : QtCore.QModelIndex
+        parent : QModelIndex
         """
         parentNode = self.get_node(parent)
 
@@ -98,47 +100,80 @@ class NodeTreeModel(QtCore.QAbstractItemModel):
         if childItem:
             return self.createIndex(row, column, childItem)
         else:
-            return QtCore.QModelIndex()
+            return QModelIndex()
 
 
 class DraggableTreeModel(NodeTreeModel):
-    def __init__(self, root: Node, attributes: Sequence[str], parent=None):
+    """
+    Parameters
+    ------------
+    root : anytree.Node
+        Base node of the tree.
+
+    encodable : Sequence[str]
+        Node's attributes that are encoded into the mimed data when a mouse
+        drag event is initiated at an item in the TreeView associated with
+        this model.
+
+    parent : Optional[QObject]
+        Parent item. Usually this is left as None.
+    """
+    def __init__(self, root: Node, encodable: Sequence[str],
+                 parent: Optional[QObject] = None):
         super().__init__(root, parent)
-        self.attributes = attributes
+        self.encodable = encodable
 
-    def _encode_nodes(self, keys=None, *nodes: Node) -> QtCore.QMimeData:
+    def _encode_nodes(self, nodes: Sequence[Node],
+                      keys: Optional[Union[Dict, Sequence]] = None) -> QMimeData:
+        """
+        Encodes data from anytree.Node object as strings.
+        """
         if keys is None:
-            keys = self.attributes
-            attributes = self.attributes
+            # encode all attributes
+            keys = self.encodable
+            encodable = self.encodable
         elif isinstance(keys, dict):
-            keys = [keys[attr] if attr in keys else None for attr in self.attributes]
+            # in the dictionary returned by this method, replace the keys with
+            # the corresponding values in this dictionary
+            # e.g. if keys = {'old_name': 'new_name'}, the Node's 'old_name'
+            # attribute will be mapped to the 'new_name' key in the output
+            # dictionary
+            keys = [keys[attr] if attr in keys else None for attr in self.encodable]
             indices = np.flatnonzero(keys)
-            attributes = np.array(self.attributes)[indices]
-        elif set(keys).intersection(self.attributes):
+            encodable = np.array(self.encodable)[indices]
+            keys = filter(None, keys)
+        elif set(keys).intersection(self.encodable):
+            # check that the keys list that was passed can be encoded
             keys = OrderedSet(keys)
-            attributes = OrderedSet(self.attributes)
-            keys = attributes = keys.intersection(attributes)
+            encodable = OrderedSet(self.encodable)
+            encodable = keys.intersection(encodable)
+        else:
+            return OrderedDict()
 
-        node_info = ([str(getattr(node, attr)) if hasattr(node, attr) else '' for node in nodes]
-                     for attr in attributes)
-        return dict(zip(keys, node_info))
+        node_info = ([str(getattr(node, attr)) if hasattr(node, attr) else ''
+                      for node in nodes] for attr in encodable)
+        return OrderedDict(zip(keys, node_info))
 
-
-    def flags(self, index: QtCore.QModelIndex):
+    def flags(self, index: QModelIndex):
         default = super().flags(index)
         if index.isValid():
-            default |= (QtCore.Qt.ItemIsDragEnabled | QtCore.Qt.ItemIsDropEnabled)
+            default |= (Qt.ItemIsDragEnabled | Qt.ItemIsDropEnabled)
         return default
 
     def mimeTypes(self):
         return ['application/node']
 
-    def get_nodes_as_dict(self, indices, keys=None):
+    def get_nodes_as_dict(self, indices: Sequence[QModelIndex],
+                          keys: Optional[Union[Dict, Sequence]]=None) -> Dict[str, str]:
+        """
+        For each Node corresponding to the QModelIndex, encode the Node's data
+        as a dictionary.
+        """
         nodes = [self.get_node(index) for index in indices]
-        return self._encode_nodes(keys, *nodes)
+        return self._encode_nodes(nodes, keys)
 
-    def mimeData(self, indices) -> QtCore.QMimeData:
-        data = self.get_nodes_as_dict(indices)
-        mime = QtCore.QMimeData()
+    def mimeData(self, indices) -> QMimeData:
+        data = dict(self.get_nodes_as_dict(indices))
+        mime = QMimeData()
         mime.setData('application/node', pickle.dumps(data))
         return mime

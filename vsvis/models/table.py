@@ -24,10 +24,10 @@ import pickle
 import h5py
 import numbers
 from itertools import count
-from qtpy import QtCore
-from typing import Sequence, Optional
+from qtpy.QtCore import QAbstractTableModel, QMimeData, QModelIndex, Qt, Signal
+from typing import Sequence, Optional, Union
 
-from ..contrib.qtpandas.models import DataFrameModel as _DataFrameModel
+from .contrib.qtpandas import DataFrameModel as _DataFrameModel
 
 
 class DataFrameModel(_DataFrameModel):
@@ -45,7 +45,7 @@ class DataFrameModel(_DataFrameModel):
 
         cols = self._dataFrame.columns
         nrows = self._dataFrame.shape[0]
-        self.beginRemoveRows(QtCore.QModelIndex(), 0, nrows)
+        self.beginRemoveRows(QModelIndex(), 0, nrows)
         self._dataFrame = pd.DataFrame(columns=cols)
         self.endRemoveRows()
         return True
@@ -59,10 +59,10 @@ class ListModel(DataFrameModel):
     def headerData(self, *args):
         return None
 
-    def data(self, index, role=QtCore.Qt.DisplayRole):
-        roles = (QtCore.Qt.DisplayRole,
-                 QtCore.Qt.EditRole,
-                 QtCore.Qt.CheckStateRole)
+    def data(self, index, role=Qt.DisplayRole):
+        roles = (Qt.DisplayRole,
+                 Qt.EditRole,
+                 Qt.CheckStateRole)
 
         if role in roles and index.column() > 1:
             return None
@@ -72,31 +72,37 @@ class ListModel(DataFrameModel):
 
 class DroppableListModel(ListModel):
     """
-    A list model that can accept items dropped from the DraggableTreeModel.
+    A list model that can accept items encoded as dictionaries whose keys are
+    strings and values are lists. Keys must be a subset of self._dataFrame's
+    column names.
     """
-    item_dropped = QtCore.Signal()
+    item_dropped = Signal()
 
-    def _parse_dropped_data(self, mime_data):
+    def _parse_dropped_data(self, mime_data: QMimeData) -> pd.DataFrame:
         byte_data = mime_data.data('application/node')
         as_dict = pickle.loads(byte_data)
+
         as_dataframe = pd.DataFrame.from_dict(as_dict)
+        # filter out rows containing any zero values
+        # this avoids adding data associated with h5py.Group objects when
+        # dragging from a DraggableTreeModel
+        as_dataframe = as_dataframe.loc[as_dataframe.all(1), :]
         columns = np.isin(as_dataframe.columns, self._dataFrame.columns)
         as_dataframe = as_dataframe.loc[:, columns]
-        as_dataframe = as_dataframe.loc[as_dataframe.all(1), :]
         as_dataframe.astype(self._dataFrame.dtypes.to_dict(), copy=False)
         return as_dataframe
 
     def supportedDropActions(self):
-        return QtCore.Qt.CopyAction
+        return Qt.CopyAction
 
-    def flags(self, index: QtCore.QModelIndex):
+    def flags(self, index: QModelIndex):
         default = super().flags(index)
-        return default | QtCore.Qt.ItemIsDropEnabled
+        return default | Qt.ItemIsDropEnabled
 
     def mimeTypes(self):
         return ['application/node']
 
-    def canDropMimeData(self, data: QtCore.QMimeData, *args):
+    def canDropMimeData(self, data: QMimeData, *args):
         if any([data.hasFormat(typ) for typ in self.mimeTypes()]):
             return True
         else:
@@ -105,25 +111,26 @@ class DroppableListModel(ListModel):
     def dropMimeData(self, data, action, *args):
         if not self.canDropMimeData(data):
             return False
-        elif action == QtCore.Qt.IgnoreAction:
+        elif action == Qt.IgnoreAction:
             return True
-        elif action == QtCore.Qt.CopyAction:
+        elif action == Qt.CopyAction:
             begin_row = self.rowCount()
-            # parsed is a named tuple whose items are the string displayed
-            # in the list, and the path to the data in the HDF5 file
+            # parse data to pandas DataFrame
             parsed = self._parse_dropped_data(data)
             if not self.addDataFrameRows(len(parsed.index)):
                 # BUG: need to remove extraneous rows if the addDataFrameRows
-                # operation failed halfway through
+                # operation fails halfway through
                 return False
 
             self._dataFrame.iloc[begin_row:, :] = parsed.values
             self.item_dropped.emit()
             self.layoutChanged.emit()
             return True
+        else:
+            return False
 
 
-class HDF5TableModel(QtCore.QAbstractTableModel):
+class HDF5TableModel(QAbstractTableModel):
     decimals = 1
 
     def __init__(self, datasets: Sequence[h5py.Dataset],
@@ -150,19 +157,19 @@ class HDF5TableModel(QtCore.QAbstractTableModel):
     def columnCount(self):
         return len(self._columns) + int(self._show_row_index)
 
-    def headerData(self, section: int, orientation: int = QtCore.Qt.Horizontal,
-                   role: int = QtCore.Qt.DisplayRole):
+    def headerData(self, section: int, orientation: int = Qt.Horizontal,
+                   role: int = Qt.DisplayRole):
 
-        if role == QtCore.Qt.DisplayRole and section < self.columnCount():
+        if role == Qt.DisplayRole and section < self.columnCount():
             return self._columns[section]
         else:
             return None
 
-    def data(self, index: QtCore.QModelIndex,
-             role: int = QtCore.Qt.DisplayRole) -> Union[float, str]:
+    def data(self, index: QModelIndex,
+             role: int = Qt.DisplayRole) -> Union[float, str]:
         if not index.isValid():
             return None
-        elif role == QtCore.Qt.DisplayRole:
+        elif role == Qt.DisplayRole:
             row = index.row()
             col = index.column()
             if col > self.columnCount() or row > self.rowCount():
@@ -198,6 +205,6 @@ class HDF5TableModel(QtCore.QAbstractTableModel):
 
     def flags(self, index):
         if not index.isValid():
-            return QtCore.Qt.NoItemFlags
+            return Qt.NoItemFlags
         else:
-            return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
+            return Qt.ItemIsEnabled | Qt.ItemIsSelectable

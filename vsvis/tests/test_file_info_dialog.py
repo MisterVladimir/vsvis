@@ -20,22 +20,23 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import pytestqt
 import pytest
-import pandas as pd
-from qtpy import QtCore
-import os
+from os.path import join
+from qtpy.QtCore import QModelIndex, Qt
 from abc import ABC
+from pandas import DataFrame
 
+from ..models.table import ListModel, DroppableListModel
 from ..file_inspection_dialog import (
-    LabeledListWidget, FileInspectionDialog, FileLoadingParameter)
-from ..models import ListModel, DroppableListModel
-from .. import TEST_DIR
+    LabeledListWidget, VFileInspectionDialog, FileLoadingParameter)
+from ..config import TEST_DIR
+from ..config import DataType
 
 
 class AbstractTest(ABC):
     WidgetClass = None
-    df_columns_only = pd.DataFrame(columns=['name', 'directory'])
-    df_full = pd.DataFrame(columns=['name', 'directory'],
-                           data=[[1, 2], [4, 5]])
+    df_columns_only = DataFrame(columns=['name', 'directory'])
+    df_full = DataFrame(columns=['name', 'directory'],
+                        data=[[1, 2], [4, 5]])
 
     def create(self, qtbot, *args, **kwargs):
         widget = self.WidgetClass(*args, **kwargs)
@@ -81,8 +82,8 @@ class TestListWidget(AbstractTest):
         widget.setModel(model)
 
 
-class TestFileInspectionDialog(AbstractTest):
-    WidgetClass = FileInspectionDialog
+class TestVFileInspectionDialog(AbstractTest):
+    WidgetClass = VFileInspectionDialog
     parameters = [
         FileLoadingParameter(
             attr='name',
@@ -99,19 +100,19 @@ class TestFileInspectionDialog(AbstractTest):
             column="Type",
             function=lambda dset: str(getattr(dset, 'dtype')))]
 
-    h5file = os.path.join(TEST_DIR, 'data', 'test_file_info_dialog.h5')
+    h5file = join(TEST_DIR, 'data', 'test.h5')
 
     def create_complete_widget(self, qtbot):
-        widget = self.create(qtbot)
-        widget.load_file(self.h5file, *self.parameters)
+        widget = self.create(qtbot, DataType.PREDICTED)
+        widget.load(self.h5file, *self.parameters)
         widget.add_list_widget('title_1', widget.attributes[:2])
         widget.add_list_widget('title_2', widget.attributes[:2])
         return widget
 
     @pytest.mark.dependency
     def test_add_h5file(self, qtbot):
-        widget = self.create(qtbot)
-        widget.load_file(self.h5file, *self.parameters)
+        widget = self.create(qtbot, DataType.PREDICTED)
+        widget.load(self.h5file, *self.parameters)
 
         table_model = widget.data_preview_table_view.model()
         assert table_model.columnCount() == len(self.parameters)
@@ -135,27 +136,27 @@ class TestFileInspectionDialog(AbstractTest):
         # test whether clicking on an index selects it
         # and whether clicking on a tree item that corresponds to a dataset
         # results in the apperance of items in the table
-        grp1_index = tree_model.index(0, 0, QtCore.QModelIndex())
+        grp1_index = tree_model.index(0, 0, QModelIndex())
         clickpos = tree_view.visualRect(grp1_index).center()
-        qtbot.mouseClick(tree_view.viewport(), QtCore.Qt.LeftButton, pos=clickpos)
+        qtbot.mouseClick(tree_view.viewport(), Qt.LeftButton, pos=clickpos)
         # try clicking on an h5py group, see if something gets selected
         assert len(tree_view.selectedIndexes()) == 1
         assert table_model.rowCount() == 1
 
         # click on a dataset
-        parent = tree_model.index(2, 0, QtCore.QModelIndex())
+        parent = tree_model.index(2, 0, QModelIndex())
         index = tree_model.index(0, 0, parent)
         clickpos = tree_view.visualRect(index).center()
-        qtbot.mouseClick(tree_view.viewport(), QtCore.Qt.LeftButton, pos=clickpos)
+        qtbot.mouseClick(tree_view.viewport(), Qt.LeftButton, pos=clickpos)
         assert len(tree_view.selectedIndexes()) == 1
         assert table_model.rowCount() == 1
 
         # open the node in the QTreeView
-        parent = tree_model.index(1, 0, QtCore.QModelIndex())
-        parent = tree_model.index(1, 0, parent)
+        parent = tree_model.index(1, 0, QModelIndex())
         index = tree_model.index(0, 0, parent)
         clickpos = tree_view.visualRect(index).center()
-        qtbot.mouseClick(tree_view.viewport(), QtCore.Qt.LeftButton, QtCore.Qt.ControlModifier, clickpos)
+        qtbot.mouseClick(tree_view.viewport(), Qt.LeftButton,
+                         Qt.ControlModifier, clickpos)
         assert len(tree_view.selectedIndexes()) == 2
         assert table_model.rowCount() == 2
         # assert 0

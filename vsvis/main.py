@@ -24,60 +24,37 @@ import re
 from qtpy import QtWidgets
 
 from vsvis.main_window import VMainWindow
-from vsvis.file_inspection_dialog import (FileLoadingParameter,
-                                          FileInspectionDialog)
-from vsvis import TEST_DIR
+from vsvis.file_inspection_dialog import (
+    FileLoadingParameter, VFileInspectionDialog, make_dialog)
+from vsvis.config import TEST_DIR
 
 
 def example_app():
     app = QtWidgets.QApplication(sys.argv)
-    main_window = VMainWindow()
-    main_window.show()
-    sys.exit(app.exec_())
+    with VMainWindow() as mw:
+        mw.show()
+        sys.exit(app.exec_())
 
 
 def example_file_info_dialog():
-    from vsvis.file_inspection_dialog import (
-        FileInspectionDialog, FileLoadingParameter)
     from vsvis import TEST_DIR
 
     filename = os.path.abspath(os.path.join(
         TEST_DIR, 'data', 'test_file_info_dialog.h5'))
     # print(filename)
     app = QtWidgets.QApplication(sys.argv)
-    dialog = FileInspectionDialog()
+    columns = ['name', 'directory']
+    predicted_titles = OrderedDict(
+        [('Title 1', columns),
+         ('Title 2', columns)])
+    dialog = make_dialog(filename, )
 
-    def get_name(dset):
-        regexp = re.compile(r'[a-zA-Z]+')
-        name = getattr(dset, 'name')
-        name = name.split('/')[-1]
-        print(name)
-        if regexp.search(name):
-            return name
-        else:
-            return '{:0>5}'.format(name)
-
-    parameters = [
-        FileLoadingParameter(
-            attr='name',
-            column='Name',
-            function=get_name),
-        FileLoadingParameter(
-            attr='directory',
-            column='Path',
-            function=lambda dset: getattr(dset, 'name')),
-        FileLoadingParameter(
-            attr='shape', column='Shape'),
-        FileLoadingParameter(
-            attr='dtype',
-            column="Type",
-            function=lambda dset: str(getattr(dset, 'dtype')))]
-
-    dialog.load_file(filename, *parameters)
+    dialog.load(filename, *parameters)
     dialog.add_list_widget('title', ['name', 'directory'])
     dialog.show()
     sys.exit(app.exec_())
 
 if __name__ == "__main__":
+    print(TEST_DIR)
     example_app()
     # example_file_info_dialog()

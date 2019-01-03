@@ -20,117 +20,78 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import h5py
 import numpy as np
-from pandas import concat
+import sys
+from pandas import concat, DataFrame
 from os.path import extsep, join, splitext
-from qtpy import QtCore, QtWidgets, uic
+from copy import copy
+# from qtpy import QtCore, QtWidgets, uic
+
+from qtpy.QtCore import Property, Qt, Signal, Slot
+from qtpy.QtWidgets import QFileDialog, QWidget
+
 from collections import OrderedDict
-from typing import Sequence
+from typing import Sequence, Dict
 from vladutils.data_structures import EnumDict
 
 from .file_inspection_dialog import make_dialog
-from . import UI_DIR
-from .datasource import HDF5Request, HDF5DataSource
-from .models.scene import (VScene, MarkerFactory,
-                           HDF5ImageManager, TiffImageManager)
+from .config import (
+    DataType, Shape, EXTENSIONS, FILETYPES, MARKER_ICONS, UI_DIR, loadUiType)
+from .datasource import HDF5Request1D, HDF5Request2D, HDF5DataSource
+from .models.scene import VGraphicsScene, MarkerFactory
 from .models.table import HDF5TableModel
-from .enums import DataType
+from .widgets import VTabWidget, VMarkerOptionsWidget, VErrorMessageBox
+from .controller import Controller
+
+# TODO: use this same loadUiType function in the rest of the program
+Ui_VMainWindowClass, VMainWindowBaseClass = loadUiType(
+    join(UI_DIR, 'main_window3.ui'))
 
 
-tr = QtCore.QObject.tr
-MainWindowClass, MainWindowBaseClass = uic.loadUiType(
-    join(UI_DIR, 'main_window2.ui'))
+class VMainWindow(VMainWindowBaseClass, Ui_VMainWindowClass):
+    #                      str, DataFrame, DataType
+    data_selected = Signal(str, object, object)
+    predicted_data_selected = Signal(dict)
+    ground_truth_data_selected = Signal(dict)
+    image_data_selected = Signal([str, list], [str])
+    file_loaded = Signal(object)
+    # filename_accepted = Signal(str, object)
+    # filename_rejected = Signal()
 
-
-class VMainWindow(MainWindowClass, MainWindowBaseClass):
-    file_extensions = EnumDict(
-        [(DataType.TIFF_IMAGE, ['tif', 'tiff', 'ome.tif']),
-         (DataType.HD5, ['h5', 'hdf5', 'hf5', 'hd5'])])
-
-    list_widget_columns = ['name', 'directory']
-    ground_truth_titles = OrderedDict(
-        [('Ground Truth Coordinates', list_widget_columns)])
-    predicted_titles = OrderedDict(
-        [('Probabilities', list_widget_columns),
-         ('Predicted Coordinates', list_widget_columns)])
-    image_titles = OrderedDict(
-        [('Images', list_widget_columns)])
-    list_widget_args = EnumDict([
-        (DataType.GROUND_TRUTH, ground_truth_titles),
-        (DataType.PREDICTED, predicted_titles),
-        (DataType.HDF_IMAGE, image_titles)])
-
-    table_columns = EnumDict([
-        (DataType.GROUND_TRUTH, ['X', 'Y']),
-        (DataType.PREDICTED, ['X', 'Y', 'Probability'])])
-
-    #                             str, DataFrame, DataType
-    data_selected = QtCore.Signal(str, object, object)
-    predicted_data_selected = QtCore.Signal(dict)
-    ground_truth_data_selected = QtCore.Signal(dict)
-    image_data_selected = QtCore.Signal([str, list], [str])
-
-    def __init__(self, tabwidget):
-        super(MainWindowBaseClass, self).__init__()
+    def __init__(self):
+        super(VMainWindow, self).__init__()
         self.setupUi(self)
-        self._setup_tables(tabwidget)
 
-        self.filenames = EnumDict([
-            (DataType.GROUND_TRUTH, None),
-            (DataType.PREDICTED, None),
-            (DataType.IMAGE, None)])
-        self.dataset_names = EnumDict([
-            (DataType.GROUND_TRUTH, None),
-            (DataType.PREDICTED, None),
-            (DataType.HDF_IMAGE, None)])
-
+        self._widget_setup()
         self._signals_setup()
 
     def __enter__(self):
         return self
 
     def __exit__(self, *args, **kwargs):
-        for item in (self._image_datasource, self._ground_truth_data, self._predicted_data):
-            try:
-                item.close()
-            except AttributeError:
-                pass
-
-    def _setup_tables(self, tabwidget):
-        tabwidget.setParent(self.tables_parent_widget)
-        self.tables_parent_widget.layout().addWidget(tabwidget)
-        self.tables_tab_widget = tabwidget
-
-    def _set_scene_common(self, manager):
-        groups = OrderedDict([
-            ('ground_truth', MarkerFactory(color=QtCore.Qt.green)),
-            ('predicted', MarkerFactory(color=QtCore.Qt.red))])
-        scene = VScene(manager, groups)
-        self.graphics_view.setScene(scene)
-
-    @QtCore.Slot(str, list)
-    def set_scene(self, filename: str, handles: Sequence[str]) -> None:
         try:
-            self._image_datasource.close()
+            self.controller.cleanup()
         except AttributeError:
             pass
-        request = HDF5Request(filename, 0, *handles)
-        datasource = HDF5DataSource(filename, request)
-        self._image_datasource = datasource
 
-        image_manager = HDF5ImageManager(datasource)
-        self._set_scene_common(image_manager)
+    def _widget_setup(self):
+        self._error_dialog = VErrorMessageBox(self)
 
-    # @QtCore.Slot(str)
-    # def set_scene(self, filename: str) -> None:
-    #     datasource = TiffDatasource(filename)
-    #     try:
-    #         self._image_datasource.close()
-    #     except AttributeError:
-    #         pass
-    #     self._image_datasource = datasource
+        self._file_dialog = QFileDialog(self, self.tr('Open File'), '')
+        self._file_dialog.setOption(QFileDialog.DontUseNativeDialog)
 
-    #     image_manager = TiffImageManager(datasource)
-    #     self._set_scene_common(image_manager)
+        # type(self.marker_options_groupbox) -> widgets.VMarkerOptionsGroupBox
+        self.marker_options_groupbox.add_widget(
+            'Predicted', DataType.PREDICTED)
+        self.marker_options_groupbox.add_widget(
+            'Ground Truth', DataType.GROUND_TRUTH)
+        for ow in self.marker_options_groupbox.widgets.values():
+            for s in Shape:
+                ow.add_marker_shape(s, MARKER_ICONS[s][0])
+
+        scene = VGraphicsScene()
+        self.graphics_view.setScene(scene)
+
+        self.controller = Controller(scene, self.tables_tab_widget, self.marker_options_groupbox)
 
     def _signals_setup(self) -> None:
         self.action_open_ground_truth.triggered.connect(
@@ -140,149 +101,99 @@ class VMainWindow(MainWindowClass, MainWindowBaseClass):
         self.action_open_image.triggered.connect(
             lambda: self.open(DataType.IMAGE))
 
-        self.image_data_selected[str, list].connect(self.set_scene)
-        # self.image_data_selected[str].connect(self.set_scene)
+        self.graphics_view_scrollbar.value_changed[int].connect(
+            self.controller.set_index)
 
-        self.predicted_data_selected[dict].connect()
-        self.ground_truth_data_selected[dict].connect()
+        self.file_loaded[object].connect(self.marker_options_groupbox.enable)
 
-        self.graphics_view_scrollbar.valueChanged[int].connect(
-            lambda index: self.scrollbar_index_changed(index))
+    def _parse_filename(self, filelist: Sequence[str], dtype: DataType):
+        def create_error_dialog(message):
+            self._error_dialog.message = message
+            self._error_dialog.exec_()
+            self.filename_rejected.emit()
 
-    def _file_open_dialog(self, **extensions):
-        ext = [[''] + list(ext) for ext in extensions.values()]
-        keys = extensions.keys()
-        extlist = [tr(self, k) + "(" + ' *.'.join(e) + ")" for k, e in zip(keys, ext)]
-        extstring = ';;'.join(extlist)
-        filename = QtWidgets.QFileDialog.getOpenFileName(
-            self, tr(self, 'Open File'), '', extstring, None,
-            QtWidgets.QFileDialog.DontUseNativeDialog)
-
-        return filename[0]
-
-    # def _hdf5_file_open_dialog(self):
-    #     key = 'HDF5 Files'
-    #     extensions = {key: self.extensions[key]}
-    #     return self._file_open_dialog(**extensions)
-
-    # def _open_hdf5_file_inspection_widget(
-    #         self, filename: str, *list_titles: str):
-    #     names = OrderedDict(
-    #         [(title, ['name', 'directory']) for title in list_titles])
-    #     return make_dialog(filename, names)
-
-    def load_data(self, filename, data, flag):
-        pass
-
-    def _open_inspection_widget(self, filename: str, flag: DataType):
-        def get_dialog_data(widget):
-            titles = self.list_widget_args[flag].keys()
-            df = [widget.list_widgets[t].get_data('directory') for t in titles]
-            return concat(df, axis=1)
-
-        dialog = make_dialog(filename, self.list_widget_args[flag], flag)
-        dialog.button_box.accepted.connect(
-            lambda: self.load_data(filename, get_dialog_data(dialog), flag))
-        dialog.show()
-
-    def open(self, flag: DataType) -> None:
-        enum_to_name = EnumDict([
-            (DataType.HD5, 'HDF5 Files'),
-            (DataType.TIFF_IMAGE, 'Tiff Files')])
-        extensions = dict(zip(enum_to_name[flag], self.extensions[flag]))
-        filename = self._file_open_dialog(**extensions)
-        if flag & DataType.TIFF_IMAGE:
-            raise NotImplementedError('Loading Tiff images is not yet '
-                                      'implemented. Please use HDF5 data.')
-        elif flag & DataType.HD5:
-            self._open_inspection_widget(filename, flag)
-        # QtWidgets.QFileDialog.getOpenFileName(
-        #     self, tr(self, 'Open File'), '',
-        #     tr(self, 'HDF5 Files (*.h5 *.hdf5 *.hf5 *.hd5)'),
-        #     None, QtWidgets.QFileDialog.DontUseNativeDialog)
-
-
-    @QtCore.Slot()
-    def open_image(self) -> None:
-        filename = self._file_open_dialog(**self.extensions)
-        if splitext(filename)[1][1:] in self.extensions['HDF5 Files']:
-            dialog = self._open_hdf5_file_inspection_widget(filename, 'Image')
-            dialog.button_box.accepted.connect(
-                self.image_data_selected.emit(filename, dialog.list_widgets['Image'].get_data('directory')))
+        if len(filelist) > 1:
+            return create_error_dialog(
+                '{} files were selected '.format(len(filelist)) +
+                'but we can only load one file at a time.')
+        elif len(filelist) == 0:
+            return create_error_dialog('No files were selected.')
         else:
-            self.image_data_selected.emit(filename)
+            filename = filelist[0]
+        # temporary to reject loaded tif images because loading them
+        # hasn't been implemented yet
+        print('***parsing filename***')
+        filename_ext = splitext(filename)[-1]
+        if filename_ext in EXTENSIONS[DataType.TIFF_IMAGE][0]:
+            create_error_dialog('tiff files not yet supported.')
+        else:
+            return filename
 
-    @QtCore.Slot()
-    def open_ground_truth(self) -> None:
-        filename = self._hdf5_file_open_dialog()
-        dialog = self._open_hdf5_file_inspection_widget(
-            filename, 'Ground Truth Coordinates')
-        dialog.button_box.accepted.connect(self.ground_truth_data_selected.emit(
-                {name: widget.get_data('directory') for name, widget in dialog.list_widgets.items()}))
+    def open(self, dtype: DataType) -> None:
+        """
+        Opens a Dialog in which the user selects a (HDF5 or TIFF) file. To
+        achieve this, we must first create a regexp-containing string for
+        the 'filter' argument to the 'getOpenFileName' method.
+        """
+        extensions = OrderedDict(zip(FILETYPES[dtype], EXTENSIONS[dtype]))
+        ext = [[''] + list(ext) for ext in extensions.values()]
+        extlist = [self.tr(k) + " (" + ' *'.join(e) + ")" for k, e in zip(extensions, ext)]
+        filter_ = ';;'.join(extlist)
+        # example filter_ string:
+        # Tiff Files (*.tif, *.tiff, *.ome.tif);;HDF5 Files (*.h5, *.hdf5, *.hf5, *.hd5)
+        self._file_dialog.setNameFilter(filter_)
+        result = self._file_dialog.exec_()
+        if result == QFileDialog.Accepted:
+            filename = self._parse_filename(
+                self._file_dialog.selectedFiles(), dtype)
+            self.open_inspection_widget(filename, dtype)
 
-    @QtCore.Slot()
-    def open_predicted(self) -> None:
-        filename = self._hdf5_file_open_dialog()
-        dialog = self._open_hdf5_file_inspection_widget(
-            filename, 'Predicted Coordinates', 'Probabilities')
-        dialog.button_box.accepted.connect(self.predicted_data_selected.emit(
-                {name: widget.get_data('directory') for name, widget in dialog.list_widgets.items()}))
+    def open_inspection_widget(self, filename: str, dtype: DataType):
+        list_widget_columns = ['name', 'directory']
+        ground_truth_titles = OrderedDict(
+            [('Ground Truth Coordinates', list_widget_columns)])
+        predicted_titles = OrderedDict(
+            [('Probabilities', list_widget_columns),
+             ('Predicted Coordinates', list_widget_columns)])
+        image_titles = OrderedDict(
+            [('Images', list_widget_columns)])
 
-    @QtCore.Slot()
+        list_widget_args = EnumDict([
+            (DataType.GROUND_TRUTH, ground_truth_titles),
+            (DataType.PREDICTED, predicted_titles),
+            (DataType.HDF_IMAGE, image_titles)])
+
+        args = list_widget_args[dtype][0]
+        dialog = make_dialog(filename, args, dtype)
+        result = dialog.exec_()
+        if result == QFileDialog.Accepted:
+            self.load(filename, dtype, dialog.get_data('directory'))
+
+    def load(self, filename: str, dtype: DataType, handles: DataFrame):
+        if dtype & DataType.HDF_IMAGE:
+            req = HDF5Request1D(filename, handles, axis=0)
+            self.graphics_view_scrollbar.setEnabled(True)
+        elif dtype & DataType.DATA:
+            req = HDF5Request2D(filename, handles)
+        else:
+            raise NotImplementedError('Loading {} not yet implemented.'.format(dtype))
+
+        print(filename)
+        print(dtype)
+        print(handles)
+        source = HDF5DataSource(filename, req)
+        self.controller.set_datasource(source, dtype)
+        self.graphics_view_scrollbar.setMaximum(len(source) - 1)
+        self.file_loaded.emit(dtype)
+
+    @Slot()
     def save(self):
         pass
 
-    @QtCore.Slot()
+    @Slot()
     def save_as(self):
         pass
 
-    @QtCore.Slot()
+    @Slot()
     def quit(self):
-        pass
-
-    def _set_image(self, index):
-        scene = self.graphics_view.scene()
-        im = scene.image_manager.request(index)
-        pixmap = scene.array2pixmap(im)
-        scene.set_pixmap(pixmap)
-
-    def _set_ground_truth_data(self, info: dict):
-        self._ground_truth_data = h5py.File()
-        for k, v in info.items():
-            self._ground_truth_coordinate_keys = 
-            
-
-    def _set_ground_truth_table_model(self, index):
-        coordinate_key = self._ground_truth_coordinate_keys[index]
-        coordinates = self._ground_truth_data[coordinate_key].value
-
-        model = HDF5TableModel([coordinates], ['x', 'y'])
-        self.ground_truth_table_view.setModel(model)
-
-        scene = self.graphics_view.scene()
-        scene.add_markers('ground_truth', coordinates)
-
-    def _set_predicted_table_model(self, index):
-        coordinate_key = self._predicted_coordinate_keys[index]
-        coordinates = self._predicted_data[coordinate_key].value
-        probability_key = self._predicted_probability_keys[index]
-        probabilities = self._predicted_data[probability_key].value
-
-        model = HDF5TableModel([coordinates, probabilities], ['x', 'y', 'p'])
-        self.ground_truth_table_view.setModel(model)
-
-        scene = self.graphics_view.scene()
-        scene.add_markers('predicted', coordinates, probability=probabilities)
-
-    @QtCore.Slot(int)
-    def scrollbar_index_changed(self, index: int):
-        self._set_image(index)
-        self._set_ground_truth_table_model(index)
-        self._set_predicted_data(index)
-
-
-def make_main_window(central_widget_class, *args, **kwargs):
-    window = VMainWindow(central_widget_class)
-    scene = VScene(['ground_truth', 'predicted'])
-    window.central_widget.graphics_view.setScene(scene)
-    return window
+        sys.exit(0)

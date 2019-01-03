@@ -19,7 +19,13 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import h5py
+import sys
+import traceback
 from anytree import Node
+from abc import abstractmethod
+from vladutils.data_structures import EnumDict
+
+from .widgets import VErrorMessageBox
 
 
 def load_node_from_hdf5(filename: str, *args, **kwargs) -> Node:
@@ -85,3 +91,25 @@ def _recursively_load_as_node(grp, path, node, *args, **kwargs):
                 grp, path + key + '/', child, *args, **kwargs)
             row += 1
     return node
+
+
+def gui_error(message: str):
+    """
+    Wrapper
+    """
+    def wrapper(func):
+        def wrapped(self, *args, **kwargs):
+            try:
+                ret = func(*args, **kwargs)
+            except Exception:
+                typ, value, tb = sys.exc_info()
+                li = traceback.format_exception(typ, value, tb)
+                detailed = ''.join(li)
+                dialog = VErrorMessageBox()
+                dialog.message = message
+                dialog.traceback = detailed
+                dialog.exec_()
+            else:
+                return ret
+        return wrapped
+    return wrapper

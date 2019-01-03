@@ -21,16 +21,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import pandas as pd
 import numpy as np
 
-from qtpy import QtCore
+from qtpy.QtCore import (QAbstractTableModel, QDateTime, QModelIndex,
+                         QObject, Qt, Signal, Slot)
 from typing import Optional
 
 
-DTYPE_ROLE = QtCore.Qt.UserRole + 1
-DATAFRAME_ROLE = QtCore.Qt.UserRole + 2
-DTYPE_CHANGE_ROLE = QtCore.Qt.UserRole + 3
+DTYPE_ROLE = Qt.UserRole + 1
+DATAFRAME_ROLE = Qt.UserRole + 2
+DTYPE_CHANGE_ROLE = Qt.UserRole + 3
 
 
-class SupportedDtypesTranslator(QtCore.QObject):
+class SupportedDtypesTranslator(QObject):
     """Represents all supported datatypes and the translations (i18n).
 
     """
@@ -38,7 +39,7 @@ class SupportedDtypesTranslator(QtCore.QObject):
         """Constructs the object with the given parent.
 
         Args:
-            parent (QtCore.QObject, optional): Causes the objected to be owned
+            parent (QObject, optional): Causes the objected to be owned
                 by `parent` instead of Qt. Defaults to `None`.
 
         """
@@ -208,7 +209,7 @@ class SupportedDtypesTranslator(QtCore.QObject):
 SupportedDtypes = SupportedDtypesTranslator()
 
 
-class ColumnDtypeModel(QtCore.QAbstractTableModel):
+class ColumnDtypeModel(QAbstractTableModel):
     """Data model returning datatypes per column
 
     Attributes:
@@ -216,8 +217,8 @@ class ColumnDtypeModel(QtCore.QAbstractTableModel):
         changeFailed (Signal('QString')): emitted if a column
             datatype could not be changed. An errormessage is provided.
     """
-    dtypeChanged = QtCore.Signal(int, object)
-    changeFailed = QtCore.Signal('QString', QtCore.QModelIndex, object)
+    dtypeChanged = Signal(int, object)
+    changeFailed = Signal('QString', QModelIndex, object)
 
     def __init__(self, dataFrame=None, editable=False):
         """the __init__ method.
@@ -284,7 +285,7 @@ class ColumnDtypeModel(QtCore.QAbstractTableModel):
             raise TypeError('Argument is not of type bool')
         self._editable = editable
 
-    def headerData(self, section, orientation, role=QtCore.Qt.DisplayRole):
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
         """defines which labels the view/user shall see.
 
         Args:
@@ -297,20 +298,20 @@ class ColumnDtypeModel(QtCore.QAbstractTableModel):
                 role is fitting, None if not.
 
         """
-        if role != QtCore.Qt.DisplayRole:
+        if role != Qt.DisplayRole:
             return None
 
-        if orientation == QtCore.Qt.Horizontal:
+        if orientation == Qt.Horizontal:
             try:
                 return self.headers[section]
             except (IndexError, ):
                 return None
 
-    def data(self, index, role=QtCore.Qt.DisplayRole):
+    def data(self, index, role=Qt.DisplayRole):
         """Retrieve the data stored in the model at the given `index`.
 
         Args:
-            index (QtCore.QModelIndex): The model index, which points at a
+            index (QModelIndex): The model index, which points at a
                 data object.
             role (Qt.ItemDataRole, optional): Defaults to `Qt.DisplayRole`. You
                 have to use different roles to retrieve different data for an
@@ -340,7 +341,7 @@ class ColumnDtypeModel(QtCore.QAbstractTableModel):
         columnName = self._dataFrame.columns[index.row()]
         columnDtype = self._dataFrame[columnName].dtype
 
-        if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.EditRole:
+        if role == Qt.DisplayRole or role == Qt.EditRole:
             if col == 0:
                 if columnName == index.row():
                     return index.row()
@@ -365,7 +366,7 @@ class ColumnDtypeModel(QtCore.QAbstractTableModel):
         `NotImplementedError` will be raised.
 
         Args:
-            index (QtCore.QModelIndex): The index of the column to be changed.
+            index (QModelIndex): The index of the column to be changed.
             value (str): The description of the new datatype, e.g.
                 `positive kleine ganze Zahl (16 Bit)`.
             role (Qt.ItemDataRole, optional): The role, which accesses and
@@ -422,7 +423,7 @@ class ColumnDtypeModel(QtCore.QAbstractTableModel):
         """Returns the item flags for the given index as ored value, e.x.: Qt.ItemIsUserCheckable | Qt.ItemIsEditable
 
         Args:
-            index (QtCore.QModelIndex): Index to define column and row
+            index (QModelIndex): Index to define column and row
 
         Returns:
             for column 'column': Qt.ItemIsSelectable | Qt.ItemIsEnabled
@@ -430,33 +431,33 @@ class ColumnDtypeModel(QtCore.QAbstractTableModel):
 
         """
         if not index.isValid():
-            return QtCore.Qt.NoItemFlags
+            return Qt.NoItemFlags
 
         col = index.column()
 
-        flags = QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
+        flags = Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
         if col > 0 and self.editable():
-            flags |= QtCore.Qt.ItemIsEditable
+            flags |= Qt.ItemIsEditable
 
         return flags
 
-    def rowCount(self, index=QtCore.QModelIndex()):
+    def rowCount(self, index=QModelIndex()):
         """returns number of rows
 
         Args:
-            index (QtCore.QModelIndex, optional): Index to define column and row. defaults to empty QModelIndex
+            index (QModelIndex, optional): Index to define column and row. defaults to empty QModelIndex
 
         Returns:
             number of rows
         """
         return len(self._dataFrame.columns)
 
-    def columnCount(self, index=QtCore.QModelIndex()):
+    def columnCount(self, index=QModelIndex()):
         """returns number of columns
 
         Args:
-            index (QtCore.QModelIndex, optional): Index to define column and row. defaults to empty QModelIndex
+            index (QModelIndex, optional): Index to define column and row. defaults to empty QModelIndex
 
         Returns:
             number of columns
@@ -464,14 +465,14 @@ class ColumnDtypeModel(QtCore.QAbstractTableModel):
         return len(self.headers)
 
 
-class DataFrameModel(QtCore.QAbstractTableModel):
+class DataFrameModel(QAbstractTableModel):
     """data model for use in QTableView, QListView, QComboBox, etc.
 
     Attributes:
-        timestampFormat (unicode): formatting string for conversion of timestamps to QtCore.QDateTime.
+        timestampFormat (unicode): formatting string for conversion of timestamps to QDateTime.
             Used in data method.
-        sortingAboutToStart (QtCore.Signal): emitted directly before sorting starts.
-        sortingFinished (QtCore.Signal): emitted, when sorting finished.
+        sortingAboutToStart (Signal): emitted directly before sorting starts.
+        sortingFinished (Signal): emitted, when sorting finished.
         dtypeChanged (Signal(columnName)): passed from related ColumnDtypeModel
             if a columns dtype has changed.
         changingDtypeFailed (Signal(columnName, index, dtype)):
@@ -498,14 +499,14 @@ class DataFrameModel(QtCore.QAbstractTableModel):
     """list of datetime datatypes for easy checking in data() and setData()"""
     _dateDtypes = SupportedDtypes.datetimeTypes()
 
-    _timestampFormat = QtCore.Qt.ISODate
+    _timestampFormat = Qt.ISODate
 
-    sortingAboutToStart = QtCore.Signal()
-    sortingFinished = QtCore.Signal()
-    dtypeChanged = QtCore.Signal(int, object)
-    changingDtypeFailed = QtCore.Signal(object, QtCore.QModelIndex, object)
-    dataChanged = QtCore.Signal()
-    dataFrameChanged = QtCore.Signal()
+    sortingAboutToStart = Signal()
+    sortingFinished = Signal()
+    dtypeChanged = Signal(int, object)
+    changingDtypeFailed = Signal(object, QModelIndex, object)
+    dataChanged = Signal()
+    dataFrameChanged = Signal()
 
     def __init__(self, dataFrame: Optional[pd.DataFrame] = None) -> None:
         """
@@ -570,7 +571,7 @@ class DataFrameModel(QtCore.QAbstractTableModel):
         self.dataChanged.emit()
         self.dataFrameChanged.emit()
 
-    @QtCore.Slot(int, object)
+    @Slot(int, object)
     def propagateDtypeChanges(self, column, dtype):
         """
         Emits a dtypeChanged signal with the column and dtype.
@@ -589,14 +590,14 @@ class DataFrameModel(QtCore.QAbstractTableModel):
     @timestampFormat.setter
     def timestampFormat(self, timestampFormat):
         """
-        Setter to _timestampFormat. Formatting string for conversion of timestamps to QtCore.QDateTime
+        Setter to _timestampFormat. Formatting string for conversion of timestamps to QDateTime
 
         Raises:
             AssertionError: if timestampFormat is not of type unicode.
 
         Args:
             timestampFormat (unicode): assign timestampFormat to _timestampFormat.
-                Formatting string for conversion of timestamps to QtCore.QDateTime. Used in data method.
+                Formatting string for conversion of timestamps to QDateTime. Used in data method.
 
         """
         if not isinstance(timestampFormat, str):
@@ -647,7 +648,7 @@ class DataFrameModel(QtCore.QAbstractTableModel):
         self.dataChanged.emit()
         self.dataFrameChanged.emit()
 
-    def headerData(self, section, orientation, role=QtCore.Qt.DisplayRole):
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
         """
         Return the header depending on section, orientation and Qt::ItemDataRole
 
@@ -663,10 +664,10 @@ class DataFrameModel(QtCore.QAbstractTableModel):
             section if orientation == Qt.Vertical
             None if horizontal orientation and section raises IndexError
         """
-        if role != QtCore.Qt.DisplayRole:
+        if role != Qt.DisplayRole:
             return None
 
-        if orientation == QtCore.Qt.Horizontal:
+        if orientation == Qt.Horizontal:
             try:
                 label = self._dataFrame.columns.tolist()[section]
                 if label == section:
@@ -674,14 +675,14 @@ class DataFrameModel(QtCore.QAbstractTableModel):
                 return label
             except (IndexError, ):
                 return None
-        elif orientation == QtCore.Qt.Vertical:
+        elif orientation == Qt.Vertical:
             return section
 
-    def data(self, index, role=QtCore.Qt.DisplayRole):
+    def data(self, index, role=Qt.DisplayRole):
         """return data depending on index, Qt::ItemDataRole and data type of the column.
 
         Args:
-            index (QtCore.QModelIndex): Index to define column and row you want to return
+            index (QModelIndex): Index to define column and row you want to return
             role (Qt::ItemDataRole): Define which data you want to return.
 
         Returns:
@@ -732,7 +733,7 @@ class DataFrameModel(QtCore.QAbstractTableModel):
             elif columnDtype in self._dateDtypes:
                 #print numpy.datetime64(self._dataFrame.ix[row, col])
                 value = pd.Timestamp(self._dataFrame.ix[row, col])
-                value = QtCore.QDateTime.fromString(str(value), self.timestampFormat)
+                value = QDateTime.fromString(str(value), self.timestampFormat)
                 #print value
             # else:
             #     raise TypeError, "returning unhandled data type"
@@ -742,20 +743,20 @@ class DataFrameModel(QtCore.QAbstractTableModel):
         col = self._dataFrame.columns[index.column()]
         columnDtype = self._dataFrame[col].dtype
 
-        if role == QtCore.Qt.DisplayRole:
+        if role == Qt.DisplayRole:
             # return the value if you wanne show True/False as text
             if columnDtype == np.bool:
                 result = self._dataFrame.ix[row, col]
             else:
                 result = convertValue(row, col, columnDtype)
-        elif role  == QtCore.Qt.EditRole:
+        elif role == Qt.EditRole:
             result = convertValue(row, col, columnDtype)
-        elif role  == QtCore.Qt.CheckStateRole:
+        elif role == Qt.CheckStateRole:
             if columnDtype == np.bool_:
                 if convertValue(row, col, columnDtype):
-                    result = QtCore.Qt.Checked
+                    result = Qt.Checked
                 else:
-                    result = QtCore.Qt.Unchecked
+                    result = Qt.Unchecked
             else:
                 result = None
         elif role == DATAFRAME_ROLE:
@@ -770,7 +771,7 @@ class DataFrameModel(QtCore.QAbstractTableModel):
         If a combobox for bool values should pop up ItemIsEditable have to set for bool columns too.
 
         Args:
-            index (QtCore.QModelIndex): Index to define column and row
+            index (QModelIndex): Index to define column and row
 
         Returns:
             if column dtype is not boolean Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
@@ -783,18 +784,18 @@ class DataFrameModel(QtCore.QAbstractTableModel):
 
         col = self._dataFrame.columns[index.column()]
         if self._dataFrame[col].dtype == np.bool:
-            flags |= QtCore.Qt.ItemIsUserCheckable
+            flags |= Qt.ItemIsUserCheckable
         else:
             # if you want to have a combobox for bool columns set this
-            flags |= QtCore.Qt.ItemIsEditable
+            flags |= Qt.ItemIsEditable
 
         return flags
 
-    def setData(self, index, value, role=QtCore.Qt.DisplayRole):
+    def setData(self, index, value, role=Qt.DisplayRole):
         """Set the value to the index position depending on Qt::ItemDataRole and data type of the column
 
         Args:
-            index (QtCore.QModelIndex): Index to define column and row.
+            index (QModelIndex): Index to define column and row.
             value (object): new value.
             role (Qt::ItemDataRole): Use this role to specify what you want to do.
 
@@ -838,7 +839,7 @@ class DataFrameModel(QtCore.QAbstractTableModel):
                 # convert the given value to a compatible datetime object.
                 # if the conversation could not be done, keep the original
                 # value.
-                if isinstance(value, QtCore.QDateTime):
+                if isinstance(value, QDateTime):
                     value = value.toString(self.timestampFormat)
                 try:
                     value = pd.Timestamp(value)
@@ -856,11 +857,11 @@ class DataFrameModel(QtCore.QAbstractTableModel):
         else:
             return False
 
-    def rowCount(self, index=QtCore.QModelIndex()):
+    def rowCount(self, index=QModelIndex()):
         """returns number of rows
 
         Args:
-            index (QtCore.QModelIndex, optional): Index to define column and row. defaults to empty QModelIndex
+            index (QModelIndex, optional): Index to define column and row. defaults to empty QModelIndex
 
         Returns:
             number of rows
@@ -874,11 +875,11 @@ class DataFrameModel(QtCore.QAbstractTableModel):
         # 1000000 loops, best of 3: 215 ns per loop
         return len(self._dataFrame.index)
 
-    def columnCount(self, index=QtCore.QModelIndex()):
+    def columnCount(self, index=QModelIndex()):
         """returns number of columns
 
         Args:
-            index (QtCore.QModelIndex, optional): Index to define column and row. defaults to empty QModelIndex
+            index (QModelIndex, optional): Index to define column and row. defaults to empty QModelIndex
 
         Returns:
             number of columns
@@ -891,7 +892,7 @@ class DataFrameModel(QtCore.QAbstractTableModel):
         # 1000000 loops, best of 3: 440 ns per loop
         return len(self._dataFrame.columns)
 
-    def sort(self, columnId, order=QtCore.Qt.AscendingOrder):
+    def sort(self, columnId, order=Qt.AscendingOrder):
         """
         Sorts the model column
 
@@ -962,7 +963,7 @@ class DataFrameModel(QtCore.QAbstractTableModel):
 
         newColumn = pd.Series([defaultValue]*elements, index=self._dataFrame.index, dtype=dtype)
 
-        self.beginInsertColumns(QtCore.QModelIndex(), columnPosition - 1, columnPosition - 1)
+        self.beginInsertColumns(QModelIndex(), columnPosition - 1, columnPosition - 1)
         try:
             self._dataFrame.insert(columnPosition, columnName, newColumn, allow_duplicates=False)
         except ValueError as e:
@@ -1004,7 +1005,7 @@ class DataFrameModel(QtCore.QAbstractTableModel):
         # Note: This function emits the rowsAboutToBeInserted() signal which
         # connected views (or proxies) must handle before the data is
         # inserted. Otherwise, the views may end up in an invalid state.
-        self.beginInsertRows(QtCore.QModelIndex(), position, position + count - 1)
+        self.beginInsertRows(QModelIndex(), position, position + count - 1)
 
         defaultValues = []
         for dtype in self._dataFrame.dtypes:
@@ -1044,7 +1045,7 @@ class DataFrameModel(QtCore.QAbstractTableModel):
                 position = position - deleted
                 if position < 0:
                     position = 0
-                self.beginRemoveColumns(QtCore.QModelIndex(), position, position)
+                self.beginRemoveColumns(QModelIndex(), position, position)
                 try:
                     self._dataFrame.drop(name, axis=1, inplace=True)
                 except ValueError as e:
@@ -1075,7 +1076,7 @@ class DataFrameModel(QtCore.QAbstractTableModel):
         if len(rows) > 0:
             position = min(rows)
             count = len(rows)
-            self.beginRemoveRows(QtCore.QModelIndex(), position, position + count - 1)
+            self.beginRemoveRows(QModelIndex(), position, position + count - 1)
 
             removedAny = False
             for idx, line in self._dataFrame.iterrows():
