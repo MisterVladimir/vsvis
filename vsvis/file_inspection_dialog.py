@@ -26,7 +26,6 @@ import pandas as pd
 from os.path import splitext, basename
 from qtpy.QtWidgets import QWidget, QDialog
 from qtpy.QtCore import QModelIndex, Slot
-from qtpy import uic
 from typing import (Callable, Dict, Generator, Optional, NamedTuple, Sequence,
                     Tuple, Union, ValuesView)
 from anytree import Node
@@ -37,11 +36,10 @@ from vladutils.iteration import isiterable
 from .models.tree import DraggableTreeModel
 from .models.table import DroppableListModel, DataFrameModel, ListModel
 from .utils import load_node_from_hdf5
-from .config import UI_DIR, TEST_DIR, EXTENSIONS
-from .config import DataType
+from .config import DataType, loadUiType, UI_DIR, TEST_DIR, EXTENSIONS
 
 
-Ui_GroupBoxClass, GroupBoxBaseClass = uic.loadUiType(
+Ui_GroupBoxClass, GroupBoxBaseClass = loadUiType(
     os.path.join(UI_DIR, 'listbox.ui'))
 ColumnType = Union[None, int, slice, Sequence[Union[str, int]]]
 PandasType = Union[pd.Series, pd.DataFrame]
@@ -128,7 +126,7 @@ class FileLoadingParameter(NamedTuple):
     function: Optional[Callable] = None
 
 
-Ui_DialogClass, DialogBaseClass = uic.loadUiType(
+Ui_DialogClass, DialogBaseClass = loadUiType(
     os.path.join(UI_DIR, 'file_inspection_dialog.ui'))
 
 

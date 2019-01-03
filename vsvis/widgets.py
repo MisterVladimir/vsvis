@@ -24,9 +24,9 @@ from qtpy.QtWidgets import (
     QAbstractItemView, QAbstractItemView, QColorDialog, QGraphicsView,
     QGroupBox, QMessageBox, QSizePolicy, QScrollBar, QSlider, QTabWidget,
     QTableView, QVBoxLayout, QWidget)
-from qtpy.QtCore import Property, QItemSelectionModel, QObject, QRect, Qt, Signal, Slot
+from qtpy.QtCore import (
+    Property, QItemSelectionModel, QObject, QRect, Qt, Signal, Slot)
 from qtpy.QtGui import QColor, QIcon, QPalette
-from qtpy.uic import loadUiType
 from functools import partialmethod
 from typing import Optional, Union
 from vladutils.data_structures import EnumDict
@@ -34,7 +34,7 @@ from collections import deque, OrderedDict
 from typing import Sequence, List
 from os.path import join
 
-from .config import UI_DIR, DATATYPES, DataType, Shape
+from .config import UI_DIR, DATATYPES, DataType, loadUiType, Shape
 from .models.table import DataFrameModel
 from .models.marker import Marker, MarkerFactory
 
