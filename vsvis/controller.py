@@ -177,7 +177,7 @@ class Controller(QObject):
 
     def _add_markers(self, dtype: DataType, index: int):
         source = self.datasources[dtype]
-        coordinates = source.request(index)
+        coordinates = source.request(index) + 1
         factory = self.groupbox.create_factory(dtype)
         markers = [factory(x, y) for x, y in coordinates[:, :2]]
         print('adding markers: {}'.format(markers))
@@ -227,8 +227,7 @@ class Controller(QObject):
         # TODO: add appropriate gui_error wrapper
         if dtype in self.datasources:
             old = self.datasources[dtype]
-            for v in old:
-                v.cleanup()
+            old.cleanup()
 
         self.datasource_about_to_load.emit(dtype)
         self.datasources[dtype] = datasource
@@ -349,7 +348,7 @@ class Controller(QObject):
     # @gui_error('Has image data been loaded?')
     def _set_image(self, index: int):
         source = self.datasources[DataType.IMAGE]
-        image = source.request(index).squeeze()
+        image = source.request(index).squeeze().T
         pixmap = self.scene.array2pixmap(image, rescale=True)
         self.scene.set_pixmap(pixmap, index)
 
