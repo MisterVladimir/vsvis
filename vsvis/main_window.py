@@ -27,15 +27,16 @@ from copy import copy
 # from qtpy import QtCore, QtWidgets, uic
 
 from qtpy.QtCore import Property, Qt, Signal, Slot
+from qtpy.QtGui import QIcon, QPixmap
 from qtpy.QtWidgets import QFileDialog, QWidget
 
 from collections import OrderedDict
-from typing import Sequence, Dict
+from typing import Sequence, Dict, Union
 from vladutils.data_structures import EnumDict
 
 from .file_inspection_dialog import make_dialog
 from .config import (
-    DataType, Shape, EXTENSIONS, FILETYPES, MARKER_ICONS, UI_DIR, loadUiType)
+    DataType, Shape, EXTENSIONS, FILETYPES, UI_DIR, loadUiType)
 from .datasource import HDF5Request1D, HDF5Request2D, HDF5DataSource
 from .models.scene import VGraphicsScene, MarkerFactory
 from .models.table import HDF5TableModel
@@ -54,8 +55,6 @@ class VMainWindow(VMainWindowBaseClass, Ui_VMainWindowClass):
     ground_truth_data_selected = Signal(dict)
     image_data_selected = Signal([str, list], [str])
     file_loaded = Signal(object)
-    # filename_accepted = Signal(str, object)
-    # filename_rejected = Signal()
 
     def __init__(self):
         super(VMainWindow, self).__init__()
@@ -84,9 +83,12 @@ class VMainWindow(VMainWindowBaseClass, Ui_VMainWindowClass):
             'Predicted', DataType.PREDICTED)
         self.marker_options_groupbox.add_widget(
             'Ground Truth', DataType.GROUND_TRUTH)
-        for ow in self.marker_options_groupbox.widgets.values():
-            for s in Shape:
-                ow.add_marker_shape(s, MARKER_ICONS[s][0])
+
+        shapes = (Shape.CIRCLE, Shape.DIAMOND)
+        icons = (QIcon(r':/circle'), QIcon(r':/diamond'))
+        for widget in self.marker_options_groupbox.widgets.values():
+            for icon, shape in zip(icons, shapes):
+                widget.add_marker_shape(shape, icon)
 
         scene = VGraphicsScene()
         self.graphics_view.setScene(scene)
@@ -105,12 +107,19 @@ class VMainWindow(VMainWindowBaseClass, Ui_VMainWindowClass):
             self.controller.set_index)
 
         self.file_loaded[object].connect(self.marker_options_groupbox.enable)
+        self.file_loaded[object].connect(
+            lambda d: self.menu_open_data.setEnabled(True) if d & DataType.IMAGE else None)
 
-    def _parse_filename(self, filelist: Sequence[str], dtype: DataType):
+    def _parse_filename(self, filelist: Sequence[str], dtype: DataType) -> str:
+        """
+        Checks for errors in the list of filenames, i.e if list is empty, or if
+        list has more than one filename. If the list passes the checks, we
+        proceed to load the file. For now, we reject TIFF files because loading
+        TIFF images is not implemented.
+        """
         def create_error_dialog(message):
             self._error_dialog.message = message
             self._error_dialog.exec_()
-            self.filename_rejected.emit()
 
         if len(filelist) > 1:
             return create_error_dialog(
@@ -126,15 +135,17 @@ class VMainWindow(VMainWindowBaseClass, Ui_VMainWindowClass):
         filename_ext = splitext(filename)[-1]
         if filename_ext in EXTENSIONS[DataType.TIFF_IMAGE][0]:
             create_error_dialog('tiff files not yet supported.')
+            return ''
         else:
             return filename
 
     def open(self, dtype: DataType) -> None:
         """
-        Opens a Dialog in which the user selects a (HDF5 or TIFF) file. To
-        achieve this, we must first create a regexp-containing string for
-        the 'filter' argument to the 'getOpenFileName' method.
+        Opens a QDialog in which the user selects an HDF5 or TIFF file.
         """
+        # we must first create a properly-formated regexp string for the
+        # 'filter' argument of the 'setNameFilter' method in our already-
+        # instantiated but not shown QDialog.
         extensions = OrderedDict(zip(FILETYPES[dtype], EXTENSIONS[dtype]))
         ext = [[''] + list(ext) for ext in extensions.values()]
         extlist = [self.tr(k) + " (" + ' *'.join(e) + ")" for k, e in zip(extensions, ext)]
@@ -142,11 +153,15 @@ class VMainWindow(VMainWindowBaseClass, Ui_VMainWindowClass):
         # example filter_ string:
         # Tiff Files (*.tif, *.tiff, *.ome.tif);;HDF5 Files (*.h5, *.hdf5, *.hf5, *.hd5)
         self._file_dialog.setNameFilter(filter_)
+        # closing the QDialog returns an enum, either "Accepted" or "Rejected"
+        # depending on whether the "Ok" or "Cancel" button was pressed,
+        # respectively
         result = self._file_dialog.exec_()
         if result == QFileDialog.Accepted:
             filename = self._parse_filename(
                 self._file_dialog.selectedFiles(), dtype)
-            self.open_inspection_widget(filename, dtype)
+            if filename:
+                self.open_inspection_widget(filename, dtype)
 
     def open_inspection_widget(self, filename: str, dtype: DataType):
         list_widget_columns = ['name', 'directory']

@@ -19,7 +19,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import os
-from qtpy.QtGui import QIcon
+from qtpy.QtGui import QIcon, QPixmap
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QGraphicsItem, QGraphicsScene
 from qtpy.uic import loadUiType as _loadUiType
@@ -67,9 +67,6 @@ class MarkerVisible(IntFlag):
     false = auto()
     either = true | false
 
-
-MARKER_ICONS = EnumDict([(Shape.CIRCLE, QIcon(':/circle')),
-                         (Shape.DIAMOND, QIcon(':/diamond'))])
 
 DEFAULT_MARKER_PARAMETERS = dict(shape=Shape.CIRCLE, size=3,
                                  color=Qt.white, filled=True)

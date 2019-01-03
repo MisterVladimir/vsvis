@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import sys
 import re
-from qtpy import QtWidgets
+from qtpy.QtWidgets import QApplication
 
 from vsvis.main_window import VMainWindow
 from vsvis.file_inspection_dialog import (
@@ -30,31 +30,11 @@ from vsvis.config import TEST_DIR
 
 
 def example_app():
-    app = QtWidgets.QApplication(sys.argv)
+    app = QApplication(sys.argv)
     with VMainWindow() as mw:
         mw.show()
         sys.exit(app.exec_())
 
 
-def example_file_info_dialog():
-    from vsvis import TEST_DIR
-
-    filename = os.path.abspath(os.path.join(
-        TEST_DIR, 'data', 'test_file_info_dialog.h5'))
-    # print(filename)
-    app = QtWidgets.QApplication(sys.argv)
-    columns = ['name', 'directory']
-    predicted_titles = OrderedDict(
-        [('Title 1', columns),
-         ('Title 2', columns)])
-    dialog = make_dialog(filename, )
-
-    dialog.load(filename, *parameters)
-    dialog.add_list_widget('title', ['name', 'directory'])
-    dialog.show()
-    sys.exit(app.exec_())
-
 if __name__ == "__main__":
-    print(TEST_DIR)
     example_app()
-    # example_file_info_dialog()
