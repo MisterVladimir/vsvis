@@ -35,12 +35,12 @@ python setup.py test
 
 Requirements
 ------------------
-pyqt
-qtpy
-pandas
-numpy
-anytree
-vladutils
+pyqt  
+qtpy  
+pandas  
+numpy  
+anytree  
+vladutils  
 
 
 License
