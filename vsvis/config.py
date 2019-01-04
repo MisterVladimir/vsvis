@@ -29,6 +29,7 @@ from typing import Union
 from vladutils.data_structures import EnumDict
 
 
+# compatibilty with pytest
 loadUiType = partial(_loadUiType, from_imports=True, import_from='vsvis')
 
 

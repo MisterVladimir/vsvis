@@ -45,7 +45,7 @@ from .controller import Controller
 
 # TODO: use this same loadUiType function in the rest of the program
 Ui_VMainWindowClass, VMainWindowBaseClass = loadUiType(
-    join(UI_DIR, 'main_window3.ui'))
+    join(UI_DIR, 'main_window.ui'))
 
 
 class VMainWindow(VMainWindowBaseClass, Ui_VMainWindowClass):

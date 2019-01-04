@@ -30,6 +30,137 @@
     <property name="spacing">
      <number>0</number>
     </property>
+    <item row="0" column="1">
+     <widget class="QWidget" name="control_panel_widget" native="true">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <property name="spacing">
+        <number>4</number>
+       </property>
+       <property name="leftMargin">
+        <number>4</number>
+       </property>
+       <property name="topMargin">
+        <number>7</number>
+       </property>
+       <property name="rightMargin">
+        <number>4</number>
+       </property>
+       <property name="bottomMargin">
+        <number>4</number>
+       </property>
+       <item>
+        <widget class="VMarkerOptionsGroupBox" name="marker_options_groupbox">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="title">
+          <string>Marker Options</string>
+         </property>
+         <property name="flat">
+          <bool>false</bool>
+         </property>
+         <layout class="QVBoxLayout" name="data_display_layout">
+          <property name="leftMargin">
+           <number>9</number>
+          </property>
+          <property name="topMargin">
+           <number>9</number>
+          </property>
+          <property name="rightMargin">
+           <number>9</number>
+          </property>
+          <property name="bottomMargin">
+           <number>9</number>
+          </property>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="VTabWidget" name="tables_tab_widget" native="true">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_2">
+          <property name="spacing">
+           <number>0</number>
+          </property>
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QSlider" name="probability_slider">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="toolTip">
+          <string>Set probability</string>
+         </property>
+         <property name="autoFillBackground">
+          <bool>false</bool>
+         </property>
+         <property name="maximum">
+          <number>100</number>
+         </property>
+         <property name="sliderPosition">
+          <number>50</number>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="tickPosition">
+          <enum>QSlider::NoTicks</enum>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item row="1" column="0" colspan="2">
+     <widget class="QProgressBar" name="progress_bar">
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>12</height>
+       </size>
+      </property>
+      <property name="value">
+       <number>1</number>
+      </property>
+      <property name="textVisible">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
     <item row="0" column="0">
      <widget class="QWidget" name="graphics_widget" native="true">
       <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -76,12 +207,15 @@
              <height>34</height>
             </size>
            </property>
+           <property name="toolTip">
+            <string>fit image to window</string>
+           </property>
            <property name="text">
             <string/>
            </property>
            <property name="icon">
             <iconset resource="../resources.qrc">
-             <normaloff>:/icons/resize_medium</normaloff>:/icons/resize_medium</iconset>
+             <normaloff>:/resize</normaloff>:/resize</iconset>
            </property>
            <property name="iconSize">
             <size>
@@ -123,12 +257,15 @@
              <height>34</height>
             </size>
            </property>
+           <property name="toolTip">
+            <string>zoom out</string>
+           </property>
            <property name="text">
             <string/>
            </property>
            <property name="icon">
             <iconset resource="../resources.qrc">
-             <normaloff>:/icons/zoom_in_small</normaloff>:/icons/zoom_in_small</iconset>
+             <normaloff>:/zoom_out</normaloff>:/zoom_out</iconset>
            </property>
            <property name="iconSize">
             <size>
@@ -161,12 +298,15 @@
              <height>34</height>
             </size>
            </property>
+           <property name="toolTip">
+            <string>zoom in</string>
+           </property>
            <property name="text">
             <string/>
            </property>
            <property name="icon">
             <iconset resource="../resources.qrc">
-             <normaloff>:/icons/zoom_out_small</normaloff>:/icons/zoom_out_small</iconset>
+             <normaloff>:/zoom_in</normaloff>:/zoom_in</iconset>
            </property>
            <property name="iconSize">
             <size>
@@ -196,6 +336,9 @@
        </item>
        <item>
         <layout class="QHBoxLayout" name="view_layout">
+         <property name="spacing">
+          <number>0</number>
+         </property>
          <item>
           <widget class="VGraphicsView" name="graphics_view">
            <property name="sizePolicy">
@@ -222,7 +365,17 @@
           </widget>
          </item>
          <item>
-          <widget class="QScrollBar" name="graphics_view_scrollbar">
+          <widget class="Line" name="line">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="VScrollBar" name="graphics_view_scrollbar">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
            <property name="sizePolicy">
             <sizepolicy hsizetype="Fixed" vsizetype="MinimumExpanding">
              <horstretch>0</horstretch>
@@ -251,221 +404,6 @@
       </layout>
      </widget>
     </item>
-    <item row="1" column="0" colspan="2">
-     <widget class="QProgressBar" name="progress_bar">
-      <property name="maximumSize">
-       <size>
-        <width>16777215</width>
-        <height>12</height>
-       </size>
-      </property>
-      <property name="value">
-       <number>1</number>
-      </property>
-      <property name="textVisible">
-       <bool>false</bool>
-      </property>
-     </widget>
-    </item>
-    <item row="0" column="1">
-     <widget class="QWidget" name="control_panel_widget" native="true">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
-      <layout class="QVBoxLayout" name="verticalLayout">
-       <property name="spacing">
-        <number>4</number>
-       </property>
-       <property name="leftMargin">
-        <number>4</number>
-       </property>
-       <property name="topMargin">
-        <number>7</number>
-       </property>
-       <property name="rightMargin">
-        <number>4</number>
-       </property>
-       <property name="bottomMargin">
-        <number>4</number>
-       </property>
-       <item>
-        <widget class="QGroupBox" name="marker_options_groupbox">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="title">
-          <string>Displayed Data</string>
-         </property>
-         <property name="flat">
-          <bool>false</bool>
-         </property>
-         <layout class="QGridLayout" name="gridLayout">
-          <item row="1" column="1">
-           <widget class="QComboBox" name="predicted_combobox">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="toolTip">
-             <string>Select predicted marker</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QCheckBox" name="predicted_checkbox">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="toolTip">
-             <string>Show predicted data</string>
-            </property>
-            <property name="text">
-             <string>Predicted</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QComboBox" name="ground_truth_combobox">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="toolTip">
-             <string>Select ground truth marker</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QCheckBox" name="ground_truth_checkbox">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="toolTip">
-             <string>Show ground truth data</string>
-            </property>
-            <property name="text">
-             <string>Ground Truth</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item>
-        <widget class="QTabWidget" name="table_tab_widget">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="currentIndex">
-          <number>0</number>
-         </property>
-         <widget class="QWidget" name="ground_truth_tab">
-          <attribute name="title">
-           <string>Ground Truth</string>
-          </attribute>
-          <layout class="QVBoxLayout" name="verticalLayout_2">
-           <item>
-            <widget class="QTableView" name="ground_truth_table_view">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="mouseTracking">
-              <bool>true</bool>
-             </property>
-             <property name="editTriggers">
-              <set>QAbstractItemView::NoEditTriggers</set>
-             </property>
-             <property name="selectionMode">
-              <enum>QAbstractItemView::ExtendedSelection</enum>
-             </property>
-             <property name="selectionBehavior">
-              <enum>QAbstractItemView::SelectRows</enum>
-             </property>
-             <attribute name="horizontalHeaderCascadingSectionResizes">
-              <bool>false</bool>
-             </attribute>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-         <widget class="QWidget" name="predicted_tab">
-          <attribute name="title">
-           <string>Predicted</string>
-          </attribute>
-          <layout class="QVBoxLayout" name="verticalLayout_3">
-           <item>
-            <widget class="QTableView" name="predicted_table_view">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="editTriggers">
-              <set>QAbstractItemView::NoEditTriggers</set>
-             </property>
-             <property name="selectionBehavior">
-              <enum>QAbstractItemView::SelectRows</enum>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </widget>
-       </item>
-       <item>
-        <widget class="VProbabilitySlider" name="probability_slider">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="toolTip">
-          <string>Set probability</string>
-         </property>
-         <property name="autoFillBackground">
-          <bool>false</bool>
-         </property>
-         <property name="maximum">
-          <number>100</number>
-         </property>
-         <property name="sliderPosition">
-          <number>50</number>
-         </property>
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="tickPosition">
-          <enum>QSlider::NoTicks</enum>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </widget>
-    </item>
    </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -482,6 +420,9 @@
      <string>File</string>
     </property>
     <widget class="QMenu" name="menu_open_data">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <property name="title">
       <string>Open data...</string>
      </property>
@@ -542,7 +483,7 @@
   <customwidget>
    <class>VGraphicsView</class>
    <extends>QGraphicsView</extends>
-   <header>vsvis.promoted</header>
+   <header>vsvis.widgets</header>
    <slots>
     <slot>fit_to_window()</slot>
     <slot>zoom_out()</slot>
@@ -550,12 +491,21 @@
    </slots>
   </customwidget>
   <customwidget>
-   <class>VProbabilitySlider</class>
-   <extends>QSlider</extends>
-   <header>vsvis.promoted</header>
-   <slots>
-    <slot>activate(int)</slot>
-   </slots>
+   <class>VMarkerOptionsGroupBox</class>
+   <extends>QGroupBox</extends>
+   <header>vsvis.widgets</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>VTabWidget</class>
+   <extends>QWidget</extends>
+   <header>vsvis.widgets</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>VScrollBar</class>
+   <extends>QScrollBar</extends>
+   <header>vsvis.widgets</header>
   </customwidget>
  </customwidgets>
  <resources>
@@ -607,22 +557,6 @@
     <hint type="destinationlabel">
      <x>255</x>
      <y>114</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>table_tab_widget</sender>
-   <signal>currentChanged(int)</signal>
-   <receiver>probability_slider</receiver>
-   <slot>activate(int)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>656</x>
-     <y>163</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>741</x>
-     <y>615</y>
     </hint>
    </hints>
   </connection>
